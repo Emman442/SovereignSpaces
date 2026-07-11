@@ -1,0 +1,6 @@
+{
+  "name": "SovereignSpaces",
+  "description": "A decentralized community platform where communities write their own constitutions in plain English and AI validators enforce them transparently on-chain.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

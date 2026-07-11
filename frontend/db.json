@@ -1,0 +1,378 @@
+{
+  "communities": {
+    "cryptography-praxis": {
+      "id": "cryptography-praxis",
+      "name": "CryptographyPraxis",
+      "description": "Strictly focused on mathematical cryptographic research, zero-knowledge proofs, and secure multiparty computation. No token price speculation or marketing.",
+      "tags": [
+        "cryptography",
+        "zk-proofs",
+        "research",
+        "math"
+      ],
+      "constitution": "CONSTITUTION OF CRYPTOGRAPHYPRAXIS\n==================================\n\nSECTION 1: FOCUS OF DISCOURSE\n1.1. All threads, links, and replies must be strictly concerned with mathematical cryptography, academic research papers, active protocol audits, cryptographic engineering, or security proofs.\n1.2. Interdisciplinary work (e.g. cryptography in privacy-preserving distributed systems) is welcome, provided the focus remains on the core cryptographic primitives.\n\nSECTION 2: CONTENT RESTRICTIONS\n2.1. SPECULATIVE TRADING & VALUE: Any mention of token price, market trends, short-term speculation, financial trading advice, or general market discussion is strictly prohibited.\n2.2. PROMOTIONAL SPAM: Shilling personal tokens, un-audited dApps, affiliate links, or marketing materials under the guise of technical discussion is forbidden.\n2.3. PERSONAL ATTACKS: Ad-homonim comments, harassment, or unprofessional critiques are prohibited. Peer review must remain professional and academic.\n\nSECTION 3: CITATION & ACCURACY\n3.1. When presenting a novel construction or critiquing existing protocols, references to papers (e.g. IACR Cryptology ePrint, ACM CCS, Eurocrypt) must be provided.",
+      "reportThreshold": 3,
+      "appealThreshold": "supermajority",
+      "creator": "0x8F3C5E9429EEDC455A6749A4C78381D921832045",
+      "founded": "2026-07-05T09:25:46.226Z",
+      "memberCount": 4,
+      "postCount": 3,
+      "moderators": [
+        "0x3C49811C824C11FD852C0637F7E6B8B181216b23",
+        "0x8F3C5E9429EEDC455A6749A4C78381D921832045"
+      ],
+      "founder": "0x8F3C5E9429EEDC455A6749A4C78381D921832045"
+    },
+    "the-agora": {
+      "id": "the-agora",
+      "name": "TheAgora",
+      "description": "Decentralized autonomous governance research, sybil-resistance, and liquid democracy mechanics. Focus on architectural voting schemes and mathematical voting proofs.",
+      "tags": [
+        "dao",
+        "governance",
+        "sybil-resistance",
+        "voting"
+      ],
+      "constitution": "CONSTITUTION OF THE AGORA\n=========================\n\nSECTION 1: GOVERNANCE THEORY\n1.1. Discourse must be centered on voting mechanisms, decentralized identity (DID), sybil-resistance techniques, quadratic funding, or liquid democracy mechanics.\n\nSECTION 2: PROHIBITED CONTENT\n2.1. OFF-TOPIC PARTISAN POLITICS: Standard nation-state partisan politics are forbidden unless directly analyzing an electronic voting mechanism or liquid democracy implementation used in that context.\n2.2. UNFOUNDED CLAIMS: Accusations of fraud or manipulation in DAOs must be accompanied by block explorer links or smart contract references.\n2.3. PERSONAL ATTACKS: Attacks on individual developers or project founders are prohibited. Discuss the architecture, not the person.",
+      "reportThreshold": 3,
+      "appealThreshold": "simple",
+      "creator": "0x2C49A7650C11FD852C0637F7E6B8B181216B2311",
+      "founded": "2026-07-06T09:25:46.227Z",
+      "memberCount": 3,
+      "postCount": 2,
+      "moderators": [
+        "0x2C49A7650C11FD852C0637F7E6B8B181216B2311"
+      ],
+      "founder": "0x2C49A7650C11FD852C0637F7E6B8B181216B2311"
+    },
+    "cypherpunk-classic": {
+      "id": "cypherpunk-classic",
+      "name": "CypherpunkClassic",
+      "description": "An archival forum dedicated to privacy-preserving technologies, the history of cypherpunks, and software sovereignty.",
+      "tags": [
+        "privacy",
+        "cypherpunk",
+        "sovereignty",
+        "history"
+      ],
+      "constitution": "THE CYPHERPUNK CLASSIC CHARTER\n==============================\n\n1. PRIVACY-CENTRICITY: We write software to defend privacy. All topics must explore cryptographic privacy, anonymous systems (Tor, Mixnets, I2P), electronic cash systems, or censorship-resistance.\n2. CODE OVER SPEECH: Show me the code. Philosophical debates are welcome, but posts introducing a tool must link to public, open-source repositories.\n3. NO SPAM OR SHILLING: Affiliate marketing or commercial coin promotion is strictly prohibited. Keep discussions educational and technical.\n4. BE RESPECTFUL: Intellectual rigour is expected. Do not flame, spam, or make low-effort personal attacks.",
+      "reportThreshold": 2,
+      "appealThreshold": "simple",
+      "creator": "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894",
+      "founded": "2026-07-07T09:25:46.227Z",
+      "memberCount": 2,
+      "postCount": 2,
+      "moderators": [
+        "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894"
+      ],
+      "founder": "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894"
+    },
+    "validator-hedge": {
+      "id": "validator-hedge",
+      "name": "ValidatorHedge",
+      "description": "Technical MEV protection, validator mechanics, consensus layer optimization, and builder behavior research.",
+      "tags": [
+        "mev",
+        "validator",
+        "consensus",
+        "ethereum"
+      ],
+      "constitution": "VALIDATOR HEDGE CHARTER\n=======================\n\nSECTION 1: CORE FOCUS\n1.1. Discussion must focus strictly on consensus-layer mechanics, MEV-boost relays, builder optimization, block space market dynamics, and validator hardware/software configurations.\n\nSECTION 2: TRADING RESTRICTIONS\n2.1. NO SPECULATIVE COIN SHILLING: No investment advice, token price speculation, yield farming hypes, or trading signals. This is a technical infrastructure community.\n2.2. SOURCE MATERIAL: Statements about block builders or relays censoring transactions must be backed by payload statistics, logs, or transaction hashes.",
+      "reportThreshold": 4,
+      "appealThreshold": "supermajority",
+      "creator": "0xF00D5E9429EEDC455A6749A4C78381D921832011",
+      "founded": "2026-07-08T09:25:46.227Z",
+      "memberCount": 2,
+      "postCount": 1,
+      "moderators": [
+        "0xF00D5E9429EEDC455A6749A4C78381D921832011"
+      ],
+      "founder": "0xF00D5E9429EEDC455A6749A4C78381D921832011"
+    }
+  },
+  "posts": {
+    "post-1": {
+      "id": "post-1",
+      "communityId": "cryptography-praxis",
+      "author": "0x5D848912C8F3C5E9429EEDC455A6749A4C7838121",
+      "title": "An elegant lookup argument construction for PLONKish tables",
+      "content": "In standard PLONK lookup protocols (like Halo2 or Caulk), lookup tables require massive multi-scalar multiplications and custom gate definitions. I am proposing an alternate scheme that binds Lookups via a bivariate polynomial evaluation. \n\nLet T be the lookup table. We can reformulate the lookup check as:\n∑ 1 / (X + f_i) = ∑ m_j / (X + t_j)\n\nWhere m_j represents the multiplicity of table element t_j. By converting this fraction equality into a polynomial identity, we can execute the lookup check in O(N log N) proving time with O(1) verifier checks.\n\nI have published the full security proof on the IACR ePrint archive under 2026/412. Would love feedback from researchers working on KZG-backed vector commitments.",
+      "contentType": "text",
+      "createdAt": "2026-07-08T21:25:46.227Z",
+      "reports": [],
+      "status": "active",
+      "verdict": null
+    },
+    "post-2": {
+      "id": "post-2",
+      "communityId": "cryptography-praxis",
+      "author": "0xBAD09999C8F3C5E9429EEDC455A6749A4C7838121",
+      "title": "🚨 $CRYPTX TOKEN 100x LAUNCH TODAY 🚨 PRIVATE PRESALE NOW OPEN",
+      "content": "Do you want to get rich fast? CryptographyPraxis has its own unofficial token launching today! \n$CRYPTX is a revolutionary utility token designed to power decentralized zk-proving networks. \n\nPresale is 80% filled! Join the telegram group now or click the link below to participate in our launchpool contract. \nThis is an easy 100x gem! Do not miss the next Bitcoin!\n\nPresale Link: https://cryptx-presale-scam-link.io/ref=0xBAD0\nJoin Telegram: t.me/cryptx_moon_official",
+      "contentType": "url",
+      "createdAt": "2026-07-09T09:25:46.227Z",
+      "reports": [
+        "0x8F3C5E9429EEDC455A6749A4C78381D921832045",
+        "0x3C49811C824C11FD852C0637F7E6B8B181216b23",
+        "0x5D848912C8F3C5E9429EEDC455A6749A4C7838121"
+      ],
+      "status": "removed",
+      "verdict": {
+        "id": "verdict-post-2",
+        "postId": "post-2",
+        "communityId": "cryptography-praxis",
+        "verdict": "violation",
+        "ruleViolated": "Section 2.1 Speculative Trading & Value, Section 2.2 Promotional Spam",
+        "reasoning": "The post is a direct financial promotion for an unofficial utility token called \"$CRYPTX\". It uses aggressive promotional language (\"🚨 $CRYPTX TOKEN 100x LAUNCH TODAY 🚨\", \"get rich fast\", \"easy 100x gem\") and provides an affiliate/referral link to a presale launchpool. This represents a severe and unambiguous violation of both Section 2.1 (which strictly prohibits any mention of token price, speculation, or trading advice) and Section 2.2 (which bans shilling personal tokens or affiliate links under the guise of technical discussion).",
+        "confidence": 99,
+        "actionTaken": "Post Removed",
+        "moderatedAt": "2026-07-09T10:25:46.227Z",
+        "isAppeal": false,
+        "triggeredBy": "0x8F3C5E9429EEDC455A6749A4C78381D921832045"
+      }
+    },
+    "post-3": {
+      "id": "post-3",
+      "communityId": "cryptography-praxis",
+      "author": "0x11223344C8F3C5E9429EEDC455A6749A4C7838121",
+      "title": "Is state-channel scalability really dead or just waiting for better zk-SNARK primitives?",
+      "content": "With L2 rollups dominating the Ethereum roadmap, state channels have been largely abandoned due to high liveness requirements and capital lock-up issues. \n\nHowever, if we integrate fast recursive zk-SNARKs (like Plonky3) to represent channel transitions off-chain, we can compress the multi-signature settle transactions into a single constant-sized proof. This would allow infinite offline channel actions with zero on-chain settlement footprint.\n\nWhat are the theoretical limitations of this model? Is anybody currently writing proofs or specifications for recursive channel state compression?",
+      "contentType": "text",
+      "createdAt": "2026-07-09T21:25:46.227Z",
+      "reports": [
+        "0x8F3C5E9429EEDC455A6749A4C78381D921832045"
+      ],
+      "status": "active",
+      "verdict": null
+    },
+    "post-4": {
+      "id": "post-4",
+      "communityId": "the-agora",
+      "author": "0x1234567890123456789012345678901234567890",
+      "title": "Sybil-resistant governance using dual-token quadratic voting balances",
+      "content": "Traditional quadratic voting (QV) is highly vulnerable to sybil attacks because a malicious user can split their tokens across N wallets to bypass the quadratic cost penalty.\n\nI propose a dual-token scheme:\n1. Governance Token (GT): Standard ERC20 representing financial stake.\n2. Identity Token (IT): Non-transferable ERC721 representing unique human identity, bound via biometric attestation.\n\nThe voting power is calculated as:\nVotes = Sqrt(GT_balance) * IT_status\n\nBy weighting the stake quadratically only if a verified human identity NFT exists, we preserve the quadratic property while making sybil splits useless (since split wallets without the IT will have zero quadratic multiplier). Let me know your thoughts on this cryptographic identity boundary.",
+      "contentType": "text",
+      "createdAt": "2026-07-08T09:25:46.227Z",
+      "reports": [],
+      "status": "active",
+      "verdict": null
+    },
+    "post-5": {
+      "id": "post-5",
+      "communityId": "the-agora",
+      "author": "0x9999888877776666555544443333222211110000",
+      "title": "Donald Trump and Joe Biden clash over crypto regulation policy in recent debate",
+      "content": "The recent US presidential debate highlighted a massive divide on cryptocurrency. One candidate argued that the SEC is choking innovation, while the other called for strict AML compliance. \n\nWho do you guys think will be better for our crypto portfolios? If the Republicans win, will Bitcoin go to $150k? Let's discuss policy and debate who deserves our votes!",
+      "contentType": "text",
+      "createdAt": "2026-07-09T13:25:46.227Z",
+      "reports": [
+        "0x2C49A7650C11FD852C0637F7E6B8B181216B2311",
+        "0x1234567890123456789012345678901234567890"
+      ],
+      "status": "removed",
+      "verdict": {
+        "id": "verdict-post-5",
+        "postId": "post-5",
+        "communityId": "the-agora",
+        "verdict": "violation",
+        "ruleViolated": "Section 2.1 Off-Topic Partisan Politics",
+        "reasoning": "The post discusses general nation-state election politics and candidate positions on crypto regulation, asking \"Who do you guys think will be better for our crypto portfolios?\" and \"If the Republicans win, will Bitcoin go to $150k?\". This is a clear violation of Section 2.1 which bans standard nation-state partisan politics unless directly analyzing an electronic voting mechanism or liquid democracy implementation. It does not contain any voting mechanics analysis, making it purely off-topic.",
+        "confidence": 95,
+        "actionTaken": "Post Removed",
+        "moderatedAt": "2026-07-09T14:25:46.227Z",
+        "isAppeal": false,
+        "triggeredBy": "0x2C49A7650C11FD852C0637F7E6B8B181216B2311"
+      }
+    },
+    "post-6": {
+      "id": "post-6",
+      "communityId": "cypherpunk-classic",
+      "author": "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894",
+      "title": "Archive of Tim May's Cypherpunk FAQ (1994) - Interactive PDF Reader",
+      "content": "Tim May's Cypherpunk FAQ remains one of the foundational legal and technological blueprints for digital privacy. \nI have compiled the full 1994 text into an indexed markdown and hosted it on IPFS. It covers cryptography, anonymous remailers, digital cash, and crypto-anarchy.\n\nView IPFS Gateway: https://gateway.ipfs.io/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/cypherpunk-faq.pdf",
+      "contentType": "url",
+      "createdAt": "2026-07-08T07:25:46.227Z",
+      "reports": [],
+      "status": "active",
+      "verdict": null
+    },
+    "post-7": {
+      "id": "post-7",
+      "communityId": "cypherpunk-classic",
+      "author": "0x6666555544443333222211110000999988887777",
+      "title": "Join our revolutionary decentralized yield farm on Arbitrum!",
+      "content": "Tired of low APY? Join decentralized farm and stake your coins for 800% annual returns. \nUse referral code CYPHERPUNK for an additional 10% booster on your liquidity pools!\n\nStake here: https://arb-yield-booster-scam.net/",
+      "contentType": "url",
+      "createdAt": "2026-07-09T03:25:46.227Z",
+      "reports": [
+        "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894",
+        "0x1234567890123456789012345678901234567890"
+      ],
+      "status": "removed",
+      "verdict": {
+        "id": "verdict-post-7",
+        "postId": "post-7",
+        "communityId": "cypherpunk-classic",
+        "verdict": "violation",
+        "ruleViolated": "Rule 3: No Spam or Shilling",
+        "reasoning": "The post is an advertisement for a yield farming platform promising high APY (\"800% annual returns\") with referral codes. This is a direct violation of Rule 3, which explicitly prohibits affiliate marketing or commercial coin promotion and mandates keeping discussions educational and technical.",
+        "confidence": 98,
+        "actionTaken": "Post Removed",
+        "moderatedAt": "2026-07-09T04:25:46.227Z",
+        "isAppeal": false,
+        "triggeredBy": "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894"
+      }
+    }
+  },
+  "moderationLogs": [
+    {
+      "id": "log-1",
+      "postId": "post-2",
+      "postTitle": "🚨 $CRYPTX TOKEN 100x LAUNCH TODAY 🚨 PRIVATE PRESALE NOW OPEN",
+      "communityId": "cryptography-praxis",
+      "communityName": "CryptographyPraxis",
+      "verdict": "violation",
+      "actionTaken": "Post Removed",
+      "reasoning": "The post is a direct financial promotion for an unofficial utility token called \"$CRYPTX\". It uses aggressive promotional language (\"🚨 $CRYPTX TOKEN 100x LAUNCH TODAY 🚨\", \"get rich fast\", \"easy 100x gem\") and provides an affiliate/referral link to a presale launchpool. This represents a severe and unambiguous violation of both Section 2.1 (which strictly prohibits any mention of token price, speculation, or trading advice) and Section 2.2 (which bans shilling personal tokens or affiliate links under the guise of technical discussion).",
+      "ruleViolated": "Section 2.1 Speculative Trading & Value, Section 2.2 Promotional Spam",
+      "timestamp": "2026-07-09T10:25:46.227Z",
+      "triggeredBy": "0x8F3C5E9429EEDC455A6749A4C78381D921832045"
+    },
+    {
+      "id": "log-2",
+      "postId": "post-5",
+      "postTitle": "Donald Trump and Joe Biden clash over crypto regulation policy in recent debate",
+      "communityId": "the-agora",
+      "communityName": "TheAgora",
+      "verdict": "violation",
+      "actionTaken": "Post Removed",
+      "reasoning": "The post discusses general nation-state election politics and candidate positions on crypto regulation, asking \"Who do you guys think will be better for our crypto portfolios?\" and \"If the Republicans win, will Bitcoin go to $150k?\". This is a clear violation of Section 2.1 which bans standard nation-state partisan politics unless directly analyzing an electronic voting mechanism or liquid democracy implementation. It does not contain any voting mechanics analysis, making it purely off-topic.",
+      "ruleViolated": "Section 2.1 Off-Topic Partisan Politics",
+      "timestamp": "2026-07-09T14:25:46.227Z",
+      "triggeredBy": "0x2C49A7650C11FD852C0637F7E6B8B181216B2311"
+    },
+    {
+      "id": "log-3",
+      "postId": "post-7",
+      "postTitle": "Join our revolutionary decentralized yield farm on Arbitrum!",
+      "communityId": "cypherpunk-classic",
+      "communityName": "CypherpunkClassic",
+      "verdict": "violation",
+      "actionTaken": "Post Removed",
+      "reasoning": "The post is an advertisement for a yield farming platform promising high APY (\"800% annual returns\") with referral codes. This is a direct violation of Rule 3, which explicitly prohibits affiliate marketing or commercial coin promotion and mandates keeping discussions educational and technical.",
+      "ruleViolated": "Rule 3: No Spam or Shilling",
+      "timestamp": "2026-07-09T04:25:46.227Z",
+      "triggeredBy": "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894"
+    }
+  ],
+  "amendments": {
+    "cryptography-praxis": [
+      {
+        "id": "amend-1",
+        "communityId": "cryptography-praxis",
+        "proposedBy": "0x3C49811C824C11FD852C0637F7E6B8B181216b23",
+        "description": "Explicitly allow discussion of cryptographic protocols used in blockchain ecosystems, provided the discussion is purely mathematical and architectural.",
+        "oldConstitution": "SECTION 1: FOCUS OF DISCOURSE\n1.1. All threads, links, and replies must be strictly concerned with mathematical cryptography, academic research papers, active protocol audits, cryptographic engineering, or security proofs.",
+        "newConstitution": "SECTION 1: FOCUS OF DISCOURSE\n1.1. All threads, links, and replies must be strictly concerned with mathematical cryptography, academic research papers, active protocol audits, cryptographic engineering, or security proofs.\n1.2. Interdisciplinary work (e.g. cryptography in privacy-preserving distributed systems) is welcome, provided the focus remains on the core cryptographic primitives.",
+        "status": "passed",
+        "votesFor": [
+          "0x8F3C5E9429EEDC455A6749A4C78381D921832045",
+          "0x3C49811C824C11FD852C0637F7E6B8B181216b23",
+          "0x5D848912C8F3C5E9429EEDC455A6749A4C7838121"
+        ],
+        "votesAgainst": [],
+        "createdAt": "2026-07-06T05:25:46.227Z"
+      }
+    ]
+  },
+  "members": {
+    "cryptography-praxis": {
+      "0x8F3C5E9429EEDC455A6749A4C78381D921832045": {
+        "communityId": "cryptography-praxis",
+        "wallet": "0x8F3C5E9429EEDC455A6749A4C78381D921832045",
+        "joinedAt": "2026-07-05T11:25:46.227Z",
+        "postsCount": 0,
+        "role": "founder"
+      },
+      "0x3C49811C824C11FD852C0637F7E6B8B181216b23": {
+        "communityId": "cryptography-praxis",
+        "wallet": "0x3C49811C824C11FD852C0637F7E6B8B181216b23",
+        "joinedAt": "2026-07-05T19:25:46.227Z",
+        "postsCount": 0,
+        "role": "moderator"
+      },
+      "0x5D848912C8F3C5E9429EEDC455A6749A4C7838121": {
+        "communityId": "cryptography-praxis",
+        "wallet": "0x5D848912C8F3C5E9429EEDC455A6749A4C7838121",
+        "joinedAt": "2026-07-06T15:25:46.227Z",
+        "postsCount": 1,
+        "role": "member"
+      },
+      "0x11223344C8F3C5E9429EEDC455A6749A4C7838121": {
+        "communityId": "cryptography-praxis",
+        "wallet": "0x11223344C8F3C5E9429EEDC455A6749A4C7838121",
+        "joinedAt": "2026-07-09T13:25:46.227Z",
+        "postsCount": 1,
+        "role": "member"
+      }
+    },
+    "the-agora": {
+      "0x2C49A7650C11FD852C0637F7E6B8B181216B2311": {
+        "communityId": "the-agora",
+        "wallet": "0x2C49A7650C11FD852C0637F7E6B8B181216B2311",
+        "joinedAt": "2026-07-06T10:25:46.227Z",
+        "postsCount": 0,
+        "role": "founder"
+      },
+      "0x1234567890123456789012345678901234567890": {
+        "communityId": "the-agora",
+        "wallet": "0x1234567890123456789012345678901234567890",
+        "joinedAt": "2026-07-07T01:25:46.227Z",
+        "postsCount": 1,
+        "role": "member"
+      },
+      "0x9999888877776666555544443333222211110000": {
+        "communityId": "the-agora",
+        "wallet": "0x9999888877776666555544443333222211110000",
+        "joinedAt": "2026-07-08T17:25:46.227Z",
+        "postsCount": 1,
+        "role": "member"
+      }
+    },
+    "cypherpunk-classic": {
+      "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894": {
+        "communityId": "cypherpunk-classic",
+        "wallet": "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894",
+        "joinedAt": "2026-07-07T10:25:46.228Z",
+        "postsCount": 1,
+        "role": "founder"
+      },
+      "0x6666555544443333222211110000999988887777": {
+        "communityId": "cypherpunk-classic",
+        "wallet": "0x6666555544443333222211110000999988887777",
+        "joinedAt": "2026-07-08T22:25:46.228Z",
+        "postsCount": 1,
+        "role": "member"
+      }
+    },
+    "validator-hedge": {
+      "0xF00D5E9429EEDC455A6749A4C78381D921832011": {
+        "communityId": "validator-hedge",
+        "wallet": "0xF00D5E9429EEDC455A6749A4C78381D921832011",
+        "joinedAt": "2026-07-08T10:25:46.228Z",
+        "postsCount": 0,
+        "role": "founder"
+      }
+    }
+  },
+  "profiles": {
+    "0x8F3C5E9429EEDC455A6749A4C78381D921832045": {
+      "wallet": "0x8F3C5E9429EEDC455A6749A4C78381D921832045",
+      "username": "SatoshiMath"
+    },
+    "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894": {
+      "wallet": "0x7C3AE8947C3AE8947C3AE8947C3AE8947C3AE894",
+      "username": "HalFinney"
+    }
+  }
+}

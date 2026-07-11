@@ -26,6 +26,7 @@ class Community:
     avatar_url: str
     banner_url: str
     tags: DynArray[str]
+    moderator_wallets: DynArray[str]
 
 
 @allow_storage
@@ -223,7 +224,8 @@ class SovereignSpaces(gl.Contract):
             created_at=gl.message_raw["datetime"],
             avatar_url=avatar_url,
             banner_url=banner_url,
-            tags=tag_array
+            tags=tag_array,
+            moderator_wallets=[founder],
         )
 
         self.community_ids.append(community_id)
@@ -309,6 +311,8 @@ class SovereignSpaces(gl.Contract):
 
         self.memberships[membership_key].role = "moderator"
         self.communities[community_id].moderator_count += i32(1)
+        self.communities[community_id].moderator_wallets.append(wallet)
+        self.communities[community_id].moderator_count += i32(1)
 
     @gl.public.write
     def remove_moderator(self, community_id: str, wallet: str) -> None:
@@ -322,6 +326,12 @@ class SovereignSpaces(gl.Contract):
 
         self.memberships[membership_key].role = "member"
         self.communities[community_id].moderator_count -= i32(1)
+        old_mods = list(self.communities[community_id].moderator_wallets)
+        new_mods: DynArray[str] = []
+        for w in old_mods:
+            if w != wallet:
+                new_mods.append(w)
+        self.communities[community_id].moderator_wallets = new_mods
 
     @gl.public.write
     def ban_member(self, community_id: str, wallet: str, reason: str) -> None:
