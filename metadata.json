@@ -1,0 +1,6 @@
+{
+  "name": "CleanCity",
+  "description": "Decentralized public infrastructure bounty platform verified by AI validators on GenLayer Studionet.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

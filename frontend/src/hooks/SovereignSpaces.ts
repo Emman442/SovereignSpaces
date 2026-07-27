@@ -31,7 +31,7 @@ export function useFetchCommunities() {
             if (!contract) {
                 throw new Error("Contract not initialized");
             }
-            return contract.getPools();
+            return contract.getCommunities();
         },
         enabled: !!contract,
     });
@@ -60,7 +60,7 @@ export function useFetchCommunityMembers(communityId: string) {
 
     return useQuery<Membership[], Error>({
         queryKey: ["community_members", communityId],
-        queryFn: () => {,
+        queryFn: () => {
             if (!contract) {
                 throw new Error("Contract not initialized");
             }
@@ -143,7 +143,7 @@ export function useFetchActiveCommunityAmendment(communityId: string) {
             if (!contract) {
                 throw new Error("Contract not initialized");
             }
-            return contract.getCommunityAmendments(communityId);
+            return contract.getActiveCommunityAmendment(communityId);
         },
         enabled: !!contract,
     });
@@ -184,7 +184,7 @@ export function useCreateCommunity() {
         },
         onError: async (error) => {
             console.error("Error creating community:", error);
-            toast.error("Failed to create community.");
+            throw new Error("Failed to create community.");
         }
     });
 }
@@ -352,7 +352,7 @@ export function useProposeAmendment() {
         },
         onError: async (error) => {
             console.error("Error proposing amendment:", error);
-            toast.error("Failed to proposing amendment");
+            throw new Error("Failed to proposing amendment");
         }
     });
 }

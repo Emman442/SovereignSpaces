@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ToastContainer, ToastMessage } from './components/Toast.tsx';
-import { WalletModal } from './components/WalletModal.tsx';
 import { LandingPage } from './components/LandingPage.tsx';
 import { ExplorePage } from './components/ExplorePage.tsx';
 import { CommunityPage } from './components/CommunityPage.tsx';
@@ -208,12 +207,7 @@ function MainAppContent() {
           </div>
         </div>
       </header>
-
-      {/* Main View Area */}
       <main className="flex-grow">{renderRoute()}</main>
-
-      {/* Global Modals & Notifications */}
-      <WalletModal onAddToast={addToast} />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );

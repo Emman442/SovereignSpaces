@@ -5,7 +5,7 @@ import { parseEther } from "viem";
 import { Community, ConstitutionAmendment, Membership, ModerationVerdict, Post, TransactionReceipt } from "./types";
 
 /**
- * MemeArena contract class for interacting with the GenLayer MemeArena contract
+ * MemeArena contract class for interacting with the GenLayer SovereignSpaces contract
  */
 
 class SovereignSpaces {
@@ -129,6 +129,7 @@ class SovereignSpaces {
             throw new Error("Failed to fetch community amendments");
         }
     }
+
 
 
     async getCommunityMembers(communityId: string): Promise<Membership[]> {
