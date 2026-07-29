@@ -25,6 +25,7 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
   const [isJoined, setIsJoined] = useState(false);
   const { isPending: isModeratingPost, mutate: moderatePost } = useModeratePost()
   const { data: verdict } =post?.moderation_id ? useFetchPostVerdict(post?.moderation_id): {}
+
   
 
   // Form states
@@ -71,7 +72,7 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
   const thresholdReached = reportsCount >= community.report_threshold;
 
   // Report post handler
-  const handleReport = async () => {
+  const handleReport = () => {
     if (!wallet) {
       onAddToast('Please connect your wallet to flag this post.', 'warning');
       connectWallet()
@@ -93,11 +94,7 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
   };
 
   // Delete post handler
-  const handleDeletePost = async () => {
-    if (!window.confirm('Type CONFIRM to proceed with post deletion:')) {
-      return;
-    }
-
+  const handleDeletePost = () => {
     deletePost({post_id: postId}, {
       onSuccess: () => {
         onAddToast("post deleted successfully", "success")
@@ -106,12 +103,10 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
         onAddToast("Failed to delete post", "success")
       }
     })
-
-
   };
 
   // Trigger AI Validator review
-    const handleTriggerReview = async () => {
+    const handleTriggerReview = () => {
     moderatePost({post_id: postId}, {onSuccess: ()=>{
       onAddToast("Post Moderation Successfully!", "success")
     }, onError: ()=>{
@@ -120,7 +115,7 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
   };
 
   // Submit appeal handler
-  const handleAppeal = async (e: React.FormEvent) => {
+  const handleAppeal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!appealText.trim()) return;
 
@@ -165,7 +160,7 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
                 <span className="text-[10px] bg-white text-black px-1.5 py-0.5 uppercase tracking-wide font-bold">
                   FOUNDER
                 </span>
-              ) : community.moderators.some((m) => m.toLowerCase() === post.author.toLowerCase()) ? (
+              ) : community?.moderators?.some((m) => m.toLowerCase() === post.author.toLowerCase()) ? (
                 <span className="text-[10px] bg-[#222222] text-white border border-[#333333] px-1.5 py-0.5 uppercase tracking-wide">
                   MODERATOR
                 </span>

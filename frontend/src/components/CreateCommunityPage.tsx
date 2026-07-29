@@ -251,7 +251,7 @@ export const CreateCommunityPage: React.FC<CreateCommunityPageProps> = ({
               disabled={isCreatingCommunity}
               className="w-full bg-white text-black py-3 px-4 font-bold uppercase tracking-wider text-sm hover:bg-[#dddddd] transition-colors disabled:bg-[#222222] disabled:text-[#555555] disabled:cursor-not-allowed"
             >
-              {!isCreatingCommunity ? 'Create Community' : 'Executing Contract Deployment...'}
+              {!isCreatingCommunity ? 'Create Community' : 'Creating sovereign space...'}
             </button>
             <p className="text-center text-[10px] text-[#555555] font-mono uppercase">
               Creating a community is free. No deposit required.

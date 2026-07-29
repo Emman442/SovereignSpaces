@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useWallet } from "../lib/genlayer/wallet";
 import { Post, Community } from '../lib/contract/types';
+import { getAddress } from 'viem';
+import { useFetchCommunities, useFetchUserCommunities, useFetchUserPosts } from '../hooks/SovereignSpaces';
 
 interface ProfilePageProps {
   viewingWallet: string;
@@ -13,33 +15,32 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onAddToast,
   onNavigate,
 }) => {
-  const { address: loggedWallet, } = useWallet();
+  const { address: loggedWallet } = useWallet();
 
-  const isOwnProfile = loggedWallet?.toLowerCase() === viewingWallet.toLowerCase();
+  const formattedViewingWallet = viewingWallet ? getAddress(viewingWallet) : '';
+  const formattedLoggedWallet = loggedWallet ? getAddress(loggedWallet) : '';
+
+  const targetWallet = viewingWallet ? viewingWallet.toLowerCase() : "";
+
+  // 2. Check ownership safely
+ const isOwnProfile = 
+    Boolean(formattedLoggedWallet) && 
+    formattedLoggedWallet === formattedViewingWallet;
 
   // Profile data state
   const [profileName, setProfileName] = useState('Anonymous');
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // User activity lists
-  const [userPosts, setUserPosts] = useState<Post[]>([]);
-  const [userCommunities, setUserCommunities] = useState<Community[]>([]);
-
+  const {isPending: isFetchingUserCommunities, data: userCommunities } = useFetchUserCommunities(formattedViewingWallet);
+  const { isPending: isFetchingUserPosts, data: userPosts } = useFetchUserPosts(formattedViewingWallet);
+    const isLoading = isFetchingUserCommunities || isFetchingUserPosts
   const [activeTab, setActiveTab] = useState<'posts' | 'communities'>('posts');
-
-  const fetchProfileData = async () => {};
-
-  useEffect(() => {
-    fetchProfileData();
-  }, [viewingWallet]);
 
   const handleCopyWallet = () => {
     navigator.clipboard.writeText(viewingWallet);
     onAddToast('Wallet address copied to clipboard!', 'success');
   };
-
+  console.log(userCommunities, userPosts)
   const handleSaveProfile = async (e: React.FormEvent) => {}
 
   return (
@@ -125,7 +126,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             activeTab === 'posts' ? 'text-white' : 'text-[#888888] hover:text-white'
           }`}
         >
-          Posts ({userPosts.length})
+          Posts ({userPosts?.length})
           {activeTab === 'posts' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"></div>}
         </button>
 
@@ -135,19 +136,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             activeTab === 'communities' ? 'text-white' : 'text-[#888888] hover:text-white'
           }`}
         >
-          Communities ({userCommunities.length})
+          Communities ({userCommunities?.length})
           {activeTab === 'communities' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"></div>}
         </button>
-
-        {/* <button
-          onClick={() => setActiveTab('history')}
-          className={`pb-3 text-xs font-mono uppercase font-bold tracking-wider relative transition-colors ${
-            activeTab === 'history' ? 'text-white' : 'text-[#888888] hover:text-white'
-          }`}
-        >
-          Reports & Flags ({userLogs.length})
-          {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"></div>}
-        </button> */}
       </div>
 
       {/* Loading Placeholders */}
@@ -161,12 +152,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           {/* Posts Tab */}
           {activeTab === 'posts' && (
             <div className="flex flex-col gap-4">
-              {userPosts.length === 0 ? (
+              {userPosts?.length === 0 ? (
                 <div className="text-center py-12 text-[#555555] font-mono text-xs uppercase border border-[#222222] bg-[#0d0d0d]">
                   No posts published on-chain yet
                 </div>
               ) : (
-                userPosts.map((post) => (
+                userPosts?.map((post) => (
                   <div
                     key={post.post_id}
                     onClick={() => onNavigate(`/communities/${post.community_id}/posts/${post.post_id}`)}
@@ -216,12 +207,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           {/* Communities Tab */}
           {activeTab === 'communities' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {userCommunities.length === 0 ? (
+              {userCommunities?.length === 0 ? (
                 <div className="md:col-span-2 text-center py-12 text-[#555555] font-mono text-xs uppercase border border-[#222222] bg-[#0d0d0d]">
                   Not a member of any communities yet
                 </div>
               ) : (
-                userCommunities.map((comm) => (
+                userCommunities?.map((comm) => (
                   <div
                     key={comm.community_id}
                     className="bg-[#111111] border border-[#222222] p-6 hover:border-white/30 transition-colors flex justify-between items-center"

@@ -1,144 +1,54 @@
-# Sample GenLayer project
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/license/mit/)
-[![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/8Jm4v89VAu)
-[![Telegram](https://img.shields.io/badge/Telegram--T.svg?style=social&logo=telegram)](https://t.me/genlayer)
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/yeagerai.svg?style=social&label=Follow%20%40GenLayer)](https://x.com/GenLayer)
-[![GitHub star chart](https://img.shields.io/github/stars/yeagerai/genlayer-project-boilerplate?style=social)](https://star-history.com/#yeagerai/genlayer-js)
+# SovereignSpaces
 
-## About
-This project includes the boilerplate code for a GenLayer use case implementation, specifically a football bets game.
+Decentralized, Self-Governing Communities Powered by On-Chain AI Consensus.
 
-## What's included
-- An example intelligent contract (Football Bets) with web access and LLM integration
-- **Direct mode tests** — fast, in-memory unit tests with web/LLM mocking (~ms per test)
-- **Integration tests** — full end-to-end tests against GenLayer Studio
-- **Contract linting** — static analysis to catch common contract issues before deployment
-- **CI pipeline** — GitHub Actions workflow for linting and direct tests
-- A production-ready Next.js 15 frontend with TypeScript, TanStack Query, and Radix UI
-- Configuration file template and deployment scripts
+SovereignSpaces is a decentralized social platform where communities set their own plain-English rules ("Constitutions") and delegate content moderation to AI models running directly on-chain. Built on GenLayer, SovereignSpaces replaces centralized platform moderation and biased human mod teams with verifiable, deterministic-from-nondeterministic AI consensus.
 
-## Requirements
-- Python >= 3.12
-- [GenLayer CLI](https://github.com/genlayerlabs/genlayer-cli) globally installed: `npm install -g genlayer`
-- GenLayer Studio (for integration tests and deployment): Install from [Docs](https://docs.genlayer.com/developers/intelligent-contracts/tooling-setup#using-the-genlayer-studio) or use the hosted [GenLayer Studio](https://studio.genlayer.com/)
+---
+
+## How It Works
+
+1. Plain-English Constitutions: Founders establish communities with rules written in natural language (e.g., "No self-promotion, keep technical discussions focused on Web3 engineering").
+2. On-Chain Web Fetching & Moderation: When reported posts cross the community threshold, GenLayer validators fetch the post content (or scrape target URLs/images via `gl.nondet.web.get`) and evaluate it against the constitution.
+3. Consensus-Driven AI Verdicts: Using GenLayer's Equivalence Principle (`gl.eq_principle.prompt_non_comparative`), multiple validator nodes independently run LLM prompts and agree on structured JSON verdicts (`violation`, `no_violation`, or `inconclusive`).
+4. Appeals & Governance: Authors can appeal hidden posts by providing contextual justifications, triggering higher-scrutiny AI evaluations. Community members can vote on amendments to change the constitution over time.
+
+---
+
+## Features
+
+- Autonomous AI Moderation: No manual mod queues. AI validators evaluate text and linked web pages against exact constitutional clauses.
+- Immutable Verdict Reasoning: Every moderation decision includes 2-3 sentences of AI reasoning and the specific rule cited, permanently stored on-chain.
+- Two-Tier Appeals System: Supports `simple` or `supermajority` strictness thresholds for secondary reviews.
+- Constitutional Governance: On-chain voting for proposed constitutional amendments.
+- Role Management: Founder, Moderator, and Member roles with granular permission handling (banning, manual hides, appointing mods).
+
+---
+
+## Architecture & Tech Stack
+
+### Smart Contract (Backend)
+- Framework: `py-genlayer` (GenLayer Intelligent Contracts)
+- Language: Python
+- Core Modules: `gl.nondet.exec_prompt`, `gl.nondet.web.get`, `gl.eq_principle`
+
+### Web Frontend
+- Framework: Next.js / React (TypeScript)
+- State & Data Fetching: TanStack Query (React Query)
+- Styling: Tailwind CSS
+- Blockchain Integration: Custom GenLayer JS SDK integration / Web3 providers
+
+---
 
 ## Project Structure
 
-```
-contracts/              # Python intelligent contracts
-tests/
-  direct/               # Fast in-memory tests (no Studio required)
-    test_create_bet.py   # Bet creation logic
-    test_resolve_bet.py  # Bet resolution with web/LLM mocks
-    test_views.py        # Read-only view methods
-  integration/           # Full tests against GenLayer Studio
-    test_football_bets.py
-    fixtures.py          # Expected state fixtures
-frontend/               # Next.js 15 app (TypeScript, TanStack Query, Radix UI)
-deploy/                 # TypeScript deployment scripts
-gltest.config.yaml      # Test runner network configuration
-pyproject.toml          # Python/pytest configuration
-.github/workflows/      # CI pipeline
-```
-
-## Quick Start
-
-### 1. Set up Python environment
-
-```shell
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 2. Lint your contracts
-
-Run the GenVM linter to catch issues before deployment:
-
-```shell
-genvm-lint check contracts/football_bets.py
-```
-
-The linter catches:
-- Forbidden imports and non-deterministic calls
-- Invalid storage types (must use `TreeMap`, `DynArray`, `u256`, etc.)
-- Missing decorators and return type annotations
-- Non-deterministic operations outside equivalence principle blocks
-- And [20+ other rules](https://github.com/genlayerlabs/genvm-linter)
-
-### 3. Run direct mode tests
-
-Direct mode tests run contracts in-memory without needing GenLayer Studio. They use mocks for web requests and LLM calls, giving you fast feedback (~milliseconds per test):
-
-```shell
-pytest tests/direct/ -v
-```
-
-Direct mode features used in these tests:
-- `direct_deploy("contracts/file.py")` — deploy contract in memory
-- `direct_vm.sender = address` — set transaction sender
-- `direct_vm.mock_web(pattern, response)` — mock HTTP/render calls
-- `direct_vm.mock_llm(pattern, response)` — mock LLM responses
-- `direct_vm.expect_revert("message")` — assert expected failures
-- `direct_vm.clear_mocks()` — reset mocks between calls
-
-### 4. Deploy the contract
-
-1. Choose your network: `genlayer network`
-2. Deploy: `genlayer deploy` (runs the script in `/deploy/deployScript.ts`)
-
-### 5. Run integration tests
-
-Integration tests deploy the contract to GenLayer Studio and test with real consensus:
-
-```shell
-gltest tests/integration/ -v -s
-```
-
-These require GenLayer Studio running (local or hosted).
-
-### 6. Set up the frontend
-
-1. Copy `frontend/.env.example` to `frontend/.env`
-2. Add your deployed contract address as `NEXT_PUBLIC_CONTRACT_ADDRESS`
-3. Run:
-
-```shell
-cd frontend
-npm install
-npm run dev
-```
-
-The app will be available at http://localhost:3000/.
-
-## How the Football Bets Contract Works
-
-1. **Creating Bets**: Users bet on a football match by providing the game date, teams, and predicted winner.
-2. **Resolving Bets**: After the match, the contract fetches results from BBC Sport, uses an LLM to extract the score, and validates via the equivalence principle.
-3. **Points**: Correct predictions earn points. Users can query their points or the leaderboard.
-
-## Testing Strategy
-
-| Test Type | Command | Speed | Requires Studio |
-|-----------|---------|-------|-----------------|
-| **Lint** | `genvm-lint check contracts/*.py` | ~250ms | No |
-| **Direct** | `pytest tests/direct/ -v` | ~ms/test | No |
-| **Integration** | `gltest tests/integration/ -v -s` | ~min/test | Yes |
-
-**Recommended workflow:**
-1. Lint after every contract change
-2. Run direct tests frequently during development
-3. Run integration tests before deployment to verify consensus behavior
-
-For AI coding agents (Claude Code, Cursor, etc.), the linter and direct tests provide the fast feedback loop needed for iterative development without requiring a running Studio instance.
-
-## Community
-- **[Discord](https://discord.gg/8Jm4v89VAu)**: Discussions, support, and announcements
-- **[Telegram](https://t.me/genlayer)**: Informal chats and quick updates
-
-## Documentation
-For detailed information, see our [documentation](https://docs.genlayer.com/).
-
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-# SovereignSpaces
+```text
+sovereign-spaces/
+├── contracts/
+│   └── sovereign_spaces.py    # GenLayer Intelligent Contract
+├── frontend/
+│   ├── components/            # UI Components (PostCard, AppealModal, Governance)
+│   ├── hooks/                 # Web3 & Mutation hooks (useSubmitEvidence, useAppeal)
+│   ├── pages/                 # Next.js routes
+│   └── styles/                # Tailwind / Global CSS
+└── README.md

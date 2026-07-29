@@ -1,7 +1,7 @@
 import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
 import { TransactionStatus } from "genlayer-js/types"
-import { parseEther } from "viem";
+import { parseEther, getAddress } from "viem";
 import { Community, ConstitutionAmendment, Membership, ModerationVerdict, Post, TransactionReceipt } from "./types";
 
 /**
@@ -67,6 +67,22 @@ class SovereignSpaces {
         }
     }
 
+    async getUserCommunities(wallet: string): Promise<Community[]> {
+        try {
+            const communities = await this.client.readContract({
+                address: this.contractAddress,
+                functionName: "get_all_user_communities",
+                args: [wallet]
+            });
+
+
+            return communities as Community[];
+        } catch (error) {
+            console.error("Error fetching user communities: ", error);
+            throw new Error("Failed to fetch user communities");
+        }
+    }
+
     async getCommunity(communityId: string): Promise<Community> {
         try {
             const community = await this.client.readContract({
@@ -80,6 +96,41 @@ class SovereignSpaces {
         } catch (error) {
             console.error("Error fetching community: ", error);
             throw new Error("Failed to fetch community");
+        }
+    }
+
+
+    async getCommunityPosts(communityId: string): Promise<Post[]> {
+        try {
+            const posts = await this.client.readContract({
+                address: this.contractAddress,
+                functionName: "get_community_posts",
+                args: [communityId]
+            });
+
+
+            return posts as Post[];
+        } catch (error) {
+            console.error("Error fetching community posts: ", error);
+            throw new Error("Failed to fetch community posts");
+        }
+    }
+
+    async getUserPosts(walletAddress: string): Promise<Post[]> {
+        const formattedAddress = walletAddress ? getAddress(walletAddress) : '';
+        
+        try {
+            const posts = await this.client.readContract({
+                address: this.contractAddress,
+                functionName: "get_all_user_posts",
+                args: [formattedAddress]
+            });
+
+
+            return posts as Post[];
+        } catch (error) {
+            console.error("Error fetching user posts: ", error);
+            throw new Error("Failed to fetch user posts");
         }
     }
 
@@ -378,6 +429,79 @@ class SovereignSpaces {
             throw new Error("Failed to propose amendment");
         }
     }
+    async appointModerator(
+        community_id: string,
+        wallet: string,
+    ) {
+        await this.client.connect("studionet");
+        try {
+            const txHash = await this.client.writeContract({
+                address: this.contractAddress,
+                functionName: "appoint_moderator",
+                args: [community_id, wallet],
+                value: BigInt(0)
+            });
+
+            const receipt = await this.client.waitForTransactionReceipt({
+                hash: txHash,
+                status: TransactionStatus.ACCEPTED,
+            });
+
+            return receipt as TransactionReceipt;
+        } catch (error) {
+            console.error("Error appointing moderator:", error);
+            throw new Error("Failed to appoint moderator");
+        }
+    }
+    async removeModerator(
+        community_id: string,
+        wallet: string,
+    ) {
+        await this.client.connect("studionet");
+        try {
+            const txHash = await this.client.writeContract({
+                address: this.contractAddress,
+                functionName: "remove_moderator",
+                args: [community_id, wallet],
+                value: BigInt(0)
+            });
+
+            const receipt = await this.client.waitForTransactionReceipt({
+                hash: txHash,
+                status: TransactionStatus.ACCEPTED,
+            });
+
+            return receipt as TransactionReceipt;
+        } catch (error) {
+            console.error("Error removing moderator:", error);
+            throw new Error("Failed to remove moderator");
+        }
+    }
+    async banMember(
+        community_id: string,
+        wallet: string,
+        reason: string
+    ) {
+        await this.client.connect("studionet");
+        try {
+            const txHash = await this.client.writeContract({
+                address: this.contractAddress,
+                functionName: "ban_member",
+                args: [community_id, wallet, reason],
+                value: BigInt(0)
+            });
+
+            const receipt = await this.client.waitForTransactionReceipt({
+                hash: txHash,
+                status: TransactionStatus.ACCEPTED,
+            });
+
+            return receipt as TransactionReceipt;
+        } catch (error) {
+            console.error("Error banning member:", error);
+            throw new Error("Failed to ban member");
+        }
+    }
     async VoteOnAmendment(
         amendment_id: string,
         vote_for: boolean
@@ -446,7 +570,7 @@ class SovereignSpaces {
 
             return receipt as TransactionReceipt;
         } catch (error) {
-            console.error("Error moderate_post:", error);
+            console.error("Error moderating post:", error);
             throw new Error("Failed to moderate");
         }
     }

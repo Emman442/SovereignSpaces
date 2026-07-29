@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useWallet } from '../lib/genlayer/wallet.ts';
 import { Community, Post, ConstitutionAmendment, Membership, ModerationVerdict } from '../lib/contract/types.ts';
-import { useAppealModerationPost, useCreatePost, useFetchCommunity, useFetchCommunityAmendments, useFetchCommunityMembers, useFetchPostVerdict, useJoinCommunity, useLeaveCommunity, useModeratePost, useProposeAmendment, useReportPost, useResolveAmendment, useVoteOnAmendment } from '../hooks/SovereignSpaces.ts';
+import { useAppealModerationPost, useAppointModerator, useBanMember, useCreatePost, useFetchCommunity, useFetchCommunityAmendments, useFetchCommunityMembers, useFetchCommunityPosts, useFetchPostVerdict, useJoinCommunity, useLeaveCommunity, useModeratePost, useProposeAmendment, useRemoveModerator, useReportPost, useResolveAmendment, useVoteOnAmendment } from '../hooks/SovereignSpaces.ts';
+import { PostCard } from './PostCard.tsx';
 
 interface CommunityPageProps {
   communityId: string;
@@ -14,12 +15,22 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   onAddToast,
   onNavigate,
 }) => {
+  const [reportingPostId, setReportingPostId] = useState<string | null>(null);
   const { address: wallet, connectWallet } = useWallet();
   const { data: community, isPending: isFetchingCommunity } = useFetchCommunity(communityId)
   const { data: amendments } = useFetchCommunityAmendments(communityId)
   const { data: members } = useFetchCommunityMembers(communityId)
-  const alreadyVotedAgainst =  false
-  const alreadyVotedFor =  false
+
+  const isJoined = Boolean(
+    members?.some(
+      (member) =>
+        member.wallet.toLowerCase() === wallet?.toLowerCase() && !member.banned
+    )
+  )
+  const alreadyVotedAgainst = false
+  const alreadyVotedFor = false
+  const { data: posts } = useFetchCommunityPosts(communityId)
+  console.log("posts: ", posts)
   const { isPending: isJoiningCommunity, mutate: joinCommunity } = useJoinCommunity()
   const { isPending: isleavingCommunity, mutate: leaveCommunity } = useLeaveCommunity()
   const { isPending: isReportingPost, mutate: reportPost } = useReportPost()
@@ -29,32 +40,23 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   const { isPending: isResolvingAmendment, mutate: resolveAmendment } = useResolveAmendment()
   const { isPending: isModeratingPost, mutate: moderatePost } = useModeratePost()
   const { isPending: isAppealingModeration, mutate: appealModeration } = useAppealModerationPost()
+  const { isPending: isAppointingModerator, mutate: appointModerator } = useAppointModerator()
+  const { isPending: isDemotingModerator, mutate: removeModerator } = useRemoveModerator()
+  const { isPending: isBanningMember, mutate: banMember } = useBanMember()
+
   // Component Data States
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [isJoined, setIsJoined] = useState(false);
-  const [userRole, setUserRole] = useState<'founder' | 'moderator' | 'member' | null>(null);
-
-
-
-  // Layout Tab State
+  const loggedInUser = members?.find(i => i.wallet.toLowerCase() === wallet?.toLowerCase())
   const [activeTab, setActiveTab] = useState<'posts' | 'constitution' | 'members' | 'amendments'>('posts');
-
-  // Create Post Form States
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [postTitle, setPostTitle] = useState('');
   const [postContent, setPostContent] = useState('');
   const [contentType, setContentType] = useState<'text' | 'url' | 'image'>('text');
-
-  // Propose Amendment Form States
   const [showAmendmentForm, setShowAmendmentForm] = useState(false);
   const [amendReason, setAmendReason] = useState('');
   const [newConstitutionText, setNewConstitutionText] = useState('');
   const [verdict, setVerdict] = useState<ModerationVerdict>()
-  // Collapsed lists/toggles
   const [expandedVerdicts, setExpandedVerdicts] = useState<Record<string, boolean>>({});
   const [expandedAmendId, setExpandedAmendId] = useState<string | null>(null);
-
-  // Member Action Confirmation States
   const [confirmingMemberAction, setConfirmingMemberAction] = useState<{
     targetWallet: string;
     action: 'appoint_mod' | 'remove_mod' | 'ban';
@@ -141,6 +143,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
     createPost({ community_id: communityId, title: postTitle, content: postContent, content_type: contentType }, {
       onSuccess: () => {
         onAddToast("post created successfully", "success")
+        setShowCreateForm(false)
       },
       onError: () => {
         onAddToast("failed to add post", "error")
@@ -160,26 +163,31 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
       onAddToast('Only community members can file reports.', 'error');
       return;
     }
+    setReportingPostId(postId);
     reportPost({
       postId: postId,
       reason: "violates community standard"
     }, {
       onSuccess: () => {
         onAddToast("post reported successfully", "success")
+        setReportingPostId(null);
       },
       onError: () => {
         onAddToast("failed to report post", "error")
+        setReportingPostId(null);
       }
     })
   };
 
   // Trigger AI consensus review
   const handleTriggerReview = async (postId: string) => {
-    moderatePost({post_id: postId}, {onSuccess: ()=>{
-      onAddToast("Post Moderation Successfully!", "success")
-    }, onError: ()=>{
-      onAddToast("Failed to moderate post", "error")
-    }})
+    moderatePost({ post_id: postId }, {
+      onSuccess: () => {
+        onAddToast("Post Moderated Successfully!", "success")
+      }, onError: () => {
+        onAddToast("Failed to moderate post", "error")
+      }
+    })
   };
 
   // Propose Amendment
@@ -191,10 +199,12 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
       onSuccess: () => {
         onAddToast("Your Amendment was proposed successfully", "success")
+        setShowAmendmentForm(false)
       },
 
       onError: () => {
         onAddToast("Failed to propose amendment", "error")
+        setShowAmendmentForm(false)
       }
     })
 
@@ -235,10 +245,42 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   const handleFounderAction = async () => {
     if (!confirmingMemberAction) return;
     const { targetWallet, action, typedConfirm } = confirmingMemberAction;
+    // console.log(action, targetWallet)
 
     if (typedConfirm !== 'CONFIRM') {
       onAddToast('Verification text mismatch. Type CONFIRM to execute.', 'error');
       return;
+    }
+
+    if (action === "appoint_mod") {
+      appointModerator({ communityId: communityId, wallet: targetWallet }, {
+        onSuccess: () => {
+          onAddToast("Moderator promotion Successful!", "success")
+        },
+        onError: () => {
+          onAddToast("Failed to appoint moderator", "error")
+        }
+      })
+    } else if (action === 'ban') {
+      banMember({
+        communityId: communityId, wallet: targetWallet, reason: "Inappopriate post"
+      }, {
+        onSuccess: () => {
+          onAddToast("Member banned successfully!", "success")
+        },
+        onError: () => {
+          onAddToast("Failed to ban member", "error")
+        }
+      })
+    } else {
+      removeModerator({ communityId: communityId, wallet: targetWallet }, {
+        onSuccess: () => {
+          onAddToast("Moderator demotion Successful!", "success")
+        },
+        onError: () => {
+          onAddToast("Failed to demote moderator", "error")
+        }
+      })
     }
   };
 
@@ -275,15 +317,12 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column (Tabs + Content) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          {/* Tab Selection Row */}
           <div className="border-b border-[#222222] flex gap-4 overflow-x-auto pb-0.5 scrollbar-hide">
             {[
               { id: 'posts', label: 'Posts' },
               { id: 'constitution', label: 'Constitution' },
               { id: 'members', label: 'Members' },
-              { id: 'logs', label: 'Moderation Log' },
               { id: 'amendments', label: 'Amendments' },
             ].map((tab) => (
               <button
@@ -402,184 +441,30 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
               )}
 
               {/* List Posts */}
-              {posts.length === 0 ? (
+              {posts?.length === 0 ? (
                 <div className="text-center py-16 text-[#555555] font-mono text-xs uppercase border border-[#222222] bg-[#111111]">
                   No posts published on-chain yet
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {posts.map((post) => {
-                    const isPostAuthor = wallet?.toLowerCase() === post.author.toLowerCase();
-                    const rCount = post.report_count;
-                    const isReportedThreshold = rCount >= community.report_threshold;
-                    if (post.moderation_id && post.moderation_id !== "") {
-                      const { data: verdict } = useFetchPostVerdict(post.moderation_id)
-                      setVerdict(verdict)
-                    }
-                    return (
-                      <div key={post.post_id} className="bg-[#111111] border border-[#222222] p-5">
-                        {/* Header info */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-[#888888] mb-3 border-b border-[#1a1a1a] pb-2">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span
-                              onClick={() => onNavigate(`/profile/${post.author}`)}
-                              className="text-white hover:underline cursor-pointer font-bold select-all"
-                            >
-                              0x{post.author.slice(2, 6)}...{post.author.slice(-4)}
-                            </span>
-
-                            {/* badges */}
-                            {post.author.toLowerCase() === community.founder.toLowerCase() ? (
-                              <span className="text-[9px] bg-white text-black px-1 py-0.2 uppercase font-bold tracking-wider">
-                                Founder
-                              </span>
-                            ) : community.moderators.some((m) => m.toLowerCase() === post.author.toLowerCase()) ? (
-                              <span className="text-[9px] bg-[#222222] text-white px-1 py-0.2 uppercase">
-                                Moderator
-                              </span>
-                            ) : null}
-
-                            <span>·</span>
-                            <span>{new Date(post.created_at).toLocaleDateString()}</span>
-                          </div>
-
-                          <div className="text-xs">
-                            {post.status === 'active' && (
-                              <span className="text-[#16a34a] font-bold text-[10px]">● ACTIVE</span>
-                            )}
-                            {post.status === 'removed' && (
-                              <span className="text-[#dc2626] font-bold text-[10px]">❌ REMOVED</span>
-                            )}
-                            {post.status === 'hidden' && (
-                              <span className="text-[#d97706] font-bold text-[10px]">⚠️ HIDDEN</span>
-                            )}
-                            {post.status === 'appealing' && (
-                              <span className="text-[#7c3aed] font-bold text-[10px]">🟣 APPEALING</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Title & snippet */}
-                        <h3
-                          onClick={() => onNavigate(`/communities/${communityId}/posts/${post.post_id}`)}
-                          className="text-lg font-bold font-mono text-white mb-2 cursor-pointer hover:underline"
-                        >
-                          {post.title}
-                        </h3>
-
-                        {/* Truncated block depending on status */}
-                        {post.status === 'removed' ? (
-                          <p className="text-xs text-[#555555] italic">
-                            [Content removed by decentralized AI consensus for constitution violation]
-                          </p>
-                        ) : (
-                          <div className="text-xs text-[#888888] line-clamp-3 leading-relaxed mb-4">
-                            {post.content_type === 'url' ? (
-                              <a
-                                href={post.content}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-white hover:underline font-mono"
-                              >
-                                View Embedded Resource Link: {post.content} ↗
-                              </a>
-                            ) : (
-                              post.content
-                            )}
-                          </div>
-                        )}
-
-                        {/* Card footer */}
-                        <div className="flex flex-wrap items-center justify-between gap-4 mt-6 pt-4 border-t border-[#1a1a1a] text-xs font-mono text-[#888888]">
-                          <div className="flex items-center gap-4">
-                            <span className="text-[#555555]">{rCount} member flags</span>
-
-                            {post.status === 'active' && !isPostAuthor && isJoined && (
-                              <button
-                                onClick={() => handleReport(post.post_id)}
-                                className="text-[#dc2626] uppercase hover:underline hover:bg-[#dc2626]/10 px-1.5 py-0.5"
-                              >
-                                {isReportingPost ? "Reporting..." : "Report"}
-                              </button>
-                            )}
-                          </div>
-
-                          <div className="flex gap-2">
-                            {isReportedThreshold && post.status === 'active' && (
-                              <button
-                                onClick={() => handleTriggerReview(post.post_id)}
-                                className="border border-white text-white px-2.5 py-1 text-[10px] font-bold uppercase hover:bg-white hover:text-black transition-colors"
-                              >
-                                {isModeratingPost? "Moderaing Post...": "Trigger Genlayer AI to moderate post"}
-                              </button>
-                            )}
-
-                            {/* Appeal own post */}
-                            {isPostAuthor && (post.status === 'hidden' || post.status === 'removed') && (
-                              <button
-                                onClick={() => onNavigate(`/communities/${communityId}/posts/${post.post_id}`)}
-                                className="border border-white text-white px-2.5 py-1 text-[10px] font-bold uppercase hover:bg-white hover:text-black transition-colors"
-                              >
-                                Appeal Decision
-                              </button>
-                            )}
-
-                            <button
-                              onClick={() => onNavigate(`/communities/${communityId}/posts/${post.post_id}`)}
-                              className="text-[#888888] hover:text-white uppercase hover:underline"
-                            >
-                              Full Thread →
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Collapsible Verdict inline preview */}
-                        {verdict && (
-                          <div className="mt-4 pt-3 border-t border-[#1a1a1a]">
-                            <button
-                              onClick={() => toggleVerdictExpansion(post.post_id)}
-                              className="text-[10px] text-white font-mono uppercase tracking-wider hover:underline"
-                            >
-                              {expandedVerdicts[post.post_id] ? '▼ Hide AI Verdict reasoning' : '▶ View AI Verdict reasoning'}
-                            </button>
-
-                            {expandedVerdicts[post.post_id] && (
-                              <div className="mt-3 bg-[#0d0d0d] border border-[#222222] p-4 font-mono text-xs text-[#888888]">
-                                <div className="flex justify-between items-center mb-2 flex-wrap gap-2 pb-1 border-b border-[#222222]">
-                                  <span className="font-bold text-white uppercase text-[10px]">
-                                    AI RULING OUTCOME
-                                  </span>
-                                  {verdict?.verdict === 'violation' ? (
-                                    <span className="text-[#dc2626] font-bold">REJECTION</span>
-                                  ) : verdict?.verdict === 'no_violation' ? (
-                                    <span className="text-[#16a34a] font-bold">CLEARED</span>
-                                  ) : (
-                                    <span className="text-[#d97706] font-bold">INCONCLUSIVE</span>
-                                  )}
-                                </div>
-                                <div className="mb-2">
-                                  <span className="text-[10px] text-white uppercase block mb-0.5">
-                                    CITED VIOLATIONS:
-                                  </span>
-                                  <span className="text-white bg-[#111111] px-1.5 py-0.5 border border-[#222222] font-bold">
-                                    {verdict.rule_violated}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-[10px] text-white uppercase block mb-0.5 font-bold">
-                                    DECISION EXPLANATION:
-                                  </span>
-                                  <p className="italic leading-relaxed text-justify">
-                                    "{verdict.reasoning}"
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {posts?.map((post) => (
+                    <PostCard
+                      key={post.post_id}
+                      post={post}
+                      community={community}
+                      communityId={communityId}
+                      wallet={wallet}
+                      isJoined={isJoined}
+                      reportingPostId={reportingPostId}
+                      isModeratingPost={isModeratingPost}
+                      isAppealingModeration={isAppealingModeration}
+                      onReport={handleReport}
+                      onTriggerReview={handleTriggerReview}
+                      onNavigate={onNavigate}
+                      expandedVerdicts={expandedVerdicts}
+                      onToggleVerdict={toggleVerdictExpansion}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -594,7 +479,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
               </div>
 
               {/* Propose Amendment (Mods/Founder only) */}
-              {(userRole === 'founder' || userRole === 'moderator') && (
+              {(loggedInUser?.role === 'founder' || loggedInUser?.role === 'moderator') && (
                 <div>
                   {!showAmendmentForm ? (
                     <button
@@ -744,12 +629,12 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                       <th className="p-3">Wallet Address</th>
                       <th className="p-3">Joined Date</th>
                       <th className="p-3">Posts</th>
-                      {userRole === 'founder' && <th className="p-3 text-right">Directives</th>}
+                      {loggedInUser?.role === 'founder' && <th className="p-3 text-right">Directives</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {/* Sort by roles (founder -> moderator -> member) */}
-                    {(members??[])
+                    {(members ?? [])
                       .sort((a, b) => {
                         const rank: Record<string, number> = { founder: 3, moderator: 2, member: 1 };
                         return (rank[b.role] || 0) - (rank[a.role] || 0);
@@ -786,7 +671,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                             <td className="p-3 text-[#888888]">{mem.posts_count}</td>
 
                             {/* Founder admin actions */}
-                            {userRole === 'founder' && (
+                            {loggedInUser?.role === 'founder' && (
                               <td className="p-3 text-right">
                                 {mem.role !== 'founder' && (
                                   <div className="flex justify-end gap-2 text-[10px]">
@@ -799,9 +684,10 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                                             typedConfirm: '',
                                           })
                                         }
+                                        disabled={isDemotingModerator}
                                         className="text-[#888888] hover:text-white uppercase font-bold"
                                       >
-                                        Demote
+                                        {isDemotingModerator ? "Demoting..." : "Demote"}
                                       </button>
                                     ) : (
                                       <button
@@ -812,6 +698,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                                             typedConfirm: '',
                                           })
                                         }
+                                        disabled={isAppointingModerator}
                                         className="text-[#888888] hover:text-white uppercase font-bold"
                                       >
                                         Promote Mod
@@ -825,6 +712,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                                           typedConfirm: '',
                                         })
                                       }
+                                      disabled={isBanningMember}
                                       className="text-[#dc2626] hover:underline uppercase font-bold"
                                     >
                                       Ban
@@ -978,7 +866,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                                     : 'bg-transparent text-white border-[#222222] hover:border-white'
                                     }`}
                                 >
-                                  { 'Vote Against'}
+                                  {'Vote Against'}
                                 </button>
                               </div>
                             ) : (
@@ -988,13 +876,13 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                             )}
 
                             {/* Founder Resolve button */}
-                            {userRole === 'founder' && (
+                            {loggedInUser?.role === 'founder' && (
                               <button
                                 onClick={() => handleResolveAmendment(amend.amendment_id)}
                                 disabled={isResolvingAmendment}
                                 className="bg-white text-black font-bold uppercase text-xs px-4 py-2 hover:bg-[#dddddd] transition-colors"
                               >
-                               {isResolvingAmendment? "Resolvong Amendment...":"Resolve & Tally Amendment"}
+                                {isResolvingAmendment ? "Resolvong Amendment..." : "Resolve & Tally Amendment"}
                               </button>
                             )}
                           </div>
@@ -1052,7 +940,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                   <div className="flex justify-between items-center">
                     <span>Your Role:</span>
                     <span className="text-white uppercase font-bold text-[10px] bg-[#222222] px-1.5 py-0.5">
-                      {userRole}
+                      {loggedInUser?.role}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -1061,7 +949,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                   </div>
                 </div>
 
-                {userRole !== 'founder' && (
+                {loggedInUser?.role !== 'founder' && (
                   <button
                     onClick={handleLeave}
                     disabled={isleavingCommunity}

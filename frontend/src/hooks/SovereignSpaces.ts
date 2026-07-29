@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { getContractAddress } from "../lib/genlayer/client";
-import { ConstitutionAmendment, Membership, ModerationVerdict, Post, type Community, type PayoutRecord, type Policy, type Pool, type WeatherReading } from "../lib/contract/types";
+import { ConstitutionAmendment, Membership, ModerationVerdict, Post, type Community} from "../lib/contract/types";
 import { toast } from "sonner";
 import { useWallet } from '../lib/genlayer/wallet';
 import MemeArena from "../lib/contract/SovereignSpaces";
@@ -32,6 +32,21 @@ export function useFetchCommunities() {
                 throw new Error("Contract not initialized");
             }
             return contract.getCommunities();
+        },
+        enabled: !!contract,
+    });
+}
+
+export function useFetchUserCommunities(wallet: string) {
+    const contract = useSovereignSpacesContract();
+
+    return useQuery<Community[], Error>({
+        queryKey: ["communities"],
+        queryFn: () => {
+            if (!contract) {
+                throw new Error("Contract not initialized");
+            }
+            return contract.getUserCommunities(wallet);
         },
         enabled: !!contract,
     });
@@ -82,6 +97,21 @@ export function useFetchCommunityPosts(communityId: string) {
             return contract.getCommunityPosts(communityId);
         },
         enabled: !!contract,
+    });
+}
+
+export function useFetchUserPosts(wallet: string) {
+    const contract = useSovereignSpacesContract();
+
+    return useQuery<Post[], Error>({
+        queryKey: ["user_posts", wallet],
+        queryFn: () => {
+            if (!contract) {
+                throw new Error("Contract not initialized");
+            }
+            return contract.getUserPosts(wallet);
+        },
+        enabled: Boolean(contract && wallet),
     });
 }
 
@@ -212,10 +242,130 @@ export function useJoinCommunity() {
             await queryClient.invalidateQueries({
                 queryKey: ["community", variables.communityId],
             });
+            await queryClient.invalidateQueries({
+                queryKey: ["community_members", variables.communityId],
+            });
+             await queryClient.invalidateQueries({
+                queryKey: ["communities"],
+            });
         },
         onError: async (error) => {
             console.error("Error Joining community:", error);
             toast.error("Failed to join commuinity.");
+        }
+    });
+}
+export function useAppointModerator() {
+    const contract = useSovereignSpacesContract();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            communityId,
+            wallet
+        }: {
+            communityId: string
+            wallet: string
+        }) => {
+            if (!contract) {
+                throw new Error("Contract not initialized");
+            }
+
+            const receipt = await contract.appointModerator(communityId, wallet);
+            console.log("moderator promotion tx receipt:", receipt);
+            return receipt;
+        },
+
+        onSuccess: async (_, variables) => {
+            await queryClient.invalidateQueries({
+                queryKey: ["community", variables.communityId],
+            });
+            await queryClient.invalidateQueries({
+                queryKey: ["community_members", variables.communityId],
+            });
+             await queryClient.invalidateQueries({
+                queryKey: ["communities"],
+            });
+        },
+        onError: async (error) => {
+            console.error("Error appointing moderator:", error);
+        }
+    });
+}
+
+export function useRemoveModerator() {
+    const contract = useSovereignSpacesContract();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            communityId,
+            wallet
+        }: {
+            communityId: string
+            wallet: string
+        }) => {
+            if (!contract) {
+                throw new Error("Contract not initialized");
+            }
+
+            const receipt = await contract.removeModerator(communityId, wallet);
+            console.log("moderator removal tx receipt:", receipt);
+            return receipt;
+        },
+
+        onSuccess: async (_, variables) => {
+            await queryClient.invalidateQueries({
+                queryKey: ["community", variables.communityId],
+            });
+            await queryClient.invalidateQueries({
+                queryKey: ["community_members", variables.communityId],
+            });
+             await queryClient.invalidateQueries({
+                queryKey: ["communities"],
+            });
+        },
+        onError: async (error) => {
+            console.error("Error demoting moderator:", error);
+        }
+    });
+}
+export function useBanMember() {
+    const contract = useSovereignSpacesContract();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            communityId,
+            wallet,
+            reason
+        }: {
+            communityId: string
+            wallet: string
+            reason: string
+        }) => {
+            if (!contract) {
+                throw new Error("Contract not initialized");
+            }
+
+            const receipt = await contract.banMember(communityId, wallet, reason);
+            console.log("ban member tx receipt:", receipt);
+            return receipt;
+        },
+
+        onSuccess: async (_, variables) => {
+            await queryClient.invalidateQueries({
+                queryKey: ["community", variables.communityId],
+            });
+            await queryClient.invalidateQueries({
+                queryKey: ["community_members", variables.communityId],
+            });
+             await queryClient.invalidateQueries({
+                queryKey: ["communities"],
+            });
+        },
+        onError: async (error) => {
+            console.error("Error banning member:", error);
         }
     });
 }
