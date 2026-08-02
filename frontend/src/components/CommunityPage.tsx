@@ -16,6 +16,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   onNavigate,
 }) => {
   const [reportingPostId, setReportingPostId] = useState<string | null>(null);
+  const [moderatingPostId, setModeratingPostId] = useState<string | null>(null);
   const { address: wallet, connectWallet } = useWallet();
   const { data: community, isPending: isFetchingCommunity } = useFetchCommunity(communityId)
   const { data: amendments } = useFetchCommunityAmendments(communityId)
@@ -54,7 +55,6 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   const [showAmendmentForm, setShowAmendmentForm] = useState(false);
   const [amendReason, setAmendReason] = useState('');
   const [newConstitutionText, setNewConstitutionText] = useState('');
-  const [verdict, setVerdict] = useState<ModerationVerdict>()
   const [expandedVerdicts, setExpandedVerdicts] = useState<Record<string, boolean>>({});
   const [expandedAmendId, setExpandedAmendId] = useState<string | null>(null);
   const [confirmingMemberAction, setConfirmingMemberAction] = useState<{
@@ -63,9 +63,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
     typedConfirm: string;
   } | null>(null);
 
-  // General Transaction/Consensus progress logs
   const [pendingTxMsg, setPendingTxMsg] = useState<string | null>(null);
-
 
   if (isFetchingCommunity) {
     return (
@@ -181,11 +179,19 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
   // Trigger AI consensus review
   const handleTriggerReview = async (postId: string) => {
+    if (!wallet) {
+      onAddToast('Please connect wallet to trigger review.', 'warning');
+      return;
+    }
+
+    setModeratingPostId(postId)
     moderatePost({ post_id: postId }, {
       onSuccess: () => {
         onAddToast("Post Moderated Successfully!", "success")
+        setModeratingPostId(null)
       }, onError: () => {
         onAddToast("Failed to moderate post", "error")
+        setModeratingPostId(null)
       }
     })
   };
@@ -219,7 +225,8 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
     }
     voteOnAmendment({
       amendment_id: amendId,
-      vote_for: support
+      vote_for: support,
+      community_id: communityId
     }, {
       onSuccess: () => {
         onAddToast("vote successful!", "success")
@@ -233,7 +240,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
   // Resolve and Merge Constitution Amendment (Founder only)
   const handleResolveAmendment = async (amendId: string) => {
-    resolveAmendment({ amendment_id: amendId }, {
+    resolveAmendment({ amendment_id: amendId, community_id: communityId }, {
       onSuccess: () => { onAddToast("Ämendment resolved successfully", "success") }, onError: () => {
         onAddToast
           ("Failed to resolve Amendment", "error")
@@ -463,6 +470,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                       onNavigate={onNavigate}
                       expandedVerdicts={expandedVerdicts}
                       onToggleVerdict={toggleVerdictExpansion}
+                      moderatingPostId={moderatingPostId}
                     />
                   ))}
                 </div>
@@ -540,9 +548,9 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                           disabled={isProposingAmendment}
                           className="bg-white text-black font-bold uppercase px-4 py-1.5 hover:bg-[#dddddd]"
                         >
-                          {isProposingAmendment ? 'Broadcasting...' : 'Publish Proposal'}
+                          {isProposingAmendment ? 'Publishing proposal...' : 'Publish Proposal'}
                         </button>
-                      </div>
+                      </div> 
                     </form>
                   )}
                 </div>

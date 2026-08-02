@@ -27,6 +27,7 @@ class Community:
     banner_url: str
     tags: DynArray[str]
     moderator_wallets: DynArray[str]
+    amendment_ids: DynArray[str]
 
 
 @allow_storage
@@ -82,6 +83,7 @@ class ModerationVerdict:
     is_appeal: bool
     moderated_at: str
     triggered_by: str           # wallet that triggered the moderation
+    appeal_context: str
 
 
 @allow_storage
@@ -108,8 +110,8 @@ class SovereignSpaces(gl.Contract):
     community_ids: DynArray[str]
     community_counter: i32
 
-    # Memberships — keyed by community_id + "|" + wallet
     memberships: TreeMap[str, Membership]
+    community_members: TreeMap[str, DynArray[str]]
 
     # Posts — keyed by post_id
     posts: TreeMap[str, Post]
@@ -118,8 +120,6 @@ class SovereignSpaces(gl.Contract):
 
     # community_id -> list of post_ids
     community_posts: TreeMap[str, DynArray[str]]
-
-    # Reports — keyed by report_id
     reports: TreeMap[str, Report]
     report_counter: i32
 
@@ -205,9 +205,15 @@ class SovereignSpaces(gl.Contract):
         self.community_counter += i32(1)
         community_id = f"community_{self.community_counter}"
 
+        # Build DynArrays the same way your working contracts do
         tag_array: DynArray[str] = []
         for tag in tags[:10]:
             tag_array.append(tag)
+
+        moderator_wallets: DynArray[str] = []
+        moderator_wallets.append(founder)
+
+        amendment_ids: DynArray[str] = []
 
         self.communities[community_id] = Community(
             community_id=community_id,
@@ -225,11 +231,18 @@ class SovereignSpaces(gl.Contract):
             avatar_url=avatar_url,
             banner_url=banner_url,
             tags=tag_array,
-            moderator_wallets=[founder],
+            moderator_wallets=moderator_wallets,
+            amendment_ids=amendment_ids,
         )
 
         self.community_ids.append(community_id)
+
+        # Same pattern that works in BetSettler / VeriFree
         self.community_posts[community_id] = []
+
+        members: DynArray[str] = []
+        members.append(founder)
+        self.community_members[community_id] = members
 
         # Founder is automatically a member with founder role
         membership_key = self._membership_key(community_id, founder)
@@ -289,6 +302,10 @@ class SovereignSpaces(gl.Contract):
 
         self.communities[community_id].member_count += i32(1)
 
+        if community_id not in self.community_members:
+            self.community_members[community_id] = []
+        self.community_members[community_id].append(wallet)
+
     @gl.public.write
     def leave_community(self, community_id: str) -> None:
         wallet = str(gl.message.sender_address)
@@ -296,8 +313,12 @@ class SovereignSpaces(gl.Contract):
         assert membership_key in self.memberships, "Not a member"
         assert not self._is_founder(community_id, wallet), "Founder cannot leave — transfer ownership first"
 
-        del self.memberships[membership_key]
-        self.communities[community_id].member_count -= i32(1)
+        old = list(self.community_members[community_id])
+        new: DynArray[str] = []
+        for w in old:
+            if w != wallet:
+                new.append(w)
+        self.community_members[community_id] = new
 
     @gl.public.write
     def appoint_moderator(self, community_id: str, wallet: str) -> None:
@@ -312,7 +333,6 @@ class SovereignSpaces(gl.Contract):
         self.memberships[membership_key].role = "moderator"
         self.communities[community_id].moderator_count += i32(1)
         self.communities[community_id].moderator_wallets.append(wallet)
-        self.communities[community_id].moderator_count += i32(1)
 
     @gl.public.write
     def remove_moderator(self, community_id: str, wallet: str) -> None:
@@ -326,6 +346,7 @@ class SovereignSpaces(gl.Contract):
 
         self.memberships[membership_key].role = "member"
         self.communities[community_id].moderator_count -= i32(1)
+
         old_mods = list(self.communities[community_id].moderator_wallets)
         new_mods: DynArray[str] = []
         for w in old_mods:
@@ -345,7 +366,13 @@ class SovereignSpaces(gl.Contract):
 
         self.memberships[membership_key].banned = True
         self.memberships[membership_key].banned_reason = reason
-        self.communities[community_id].member_count -= i32(1)
+
+        old = list(self.community_members[community_id])
+        new: DynArray[str] = []
+        for w in old:
+            if w != wallet:
+                new.append(w)
+        self.community_members[community_id] = new
 
     # ─── Posting ──────────────────────────────────────────────
 
@@ -444,13 +471,6 @@ class SovereignSpaces(gl.Contract):
 
     @gl.public.write
     def moderate_post(self, post_id: str) -> None:
-        """
-        Triggers AI moderation on a reported post.
-        Anyone can call this once the report threshold is reached.
-        The AI validators read the post content and the community
-        constitution and reach consensus on whether the post violates
-        any rule. The verdict and reasoning are stored permanently on-chain.
-        """
         triggered_by = str(gl.message.sender_address)
         assert post_id in self.posts, "Post not found"
 
@@ -470,110 +490,103 @@ class SovereignSpaces(gl.Contract):
         post_content_type = post.content_type
         community_name = community.name
 
-        def evaluate_post() -> str:
-            # If content is a URL, fetch it for analysis
+        def get_verdict() -> str:
             fetched_content = ""
             if post_content_type in ["url", "image_url"] and post_content.startswith("http"):
                 try:
                     response = gl.nondet.web.get(post_content)
                     fetched_content = response.body.decode("utf-8")[:3000]
                 except:
-                    fetched_content = "Could not fetch URL content"
+                    fetched_content = post_content
             else:
                 fetched_content = post_content
 
-            prompt = f"""You are an impartial AI content moderator for a decentralized community.
+            prompt = f"""You are a strict content moderator for a decentralized community.
 
-Community: "{community_name}"
+    Community: "{community_name}"
 
-Community Constitution (the rules):
-{constitution}
+    Community Constitution (the rules):
+    {constitution}
 
-Post Title:
-"{post_title}"
+    Post Title:
+    "{post_title}"
 
-Post Content:
-{fetched_content}
+    Post Content:
+    {fetched_content}
 
-Your task:
-Carefully read the community constitution and evaluate whether this post
-violates any of the stated rules.
+    Does this post violate any rule in the community constitution?
 
-Be precise and fair. Only flag genuine violations — do not be overly strict
-on borderline cases. If the rules are ambiguous, rule in favor of the poster.
+    Reply with ONLY one of these two words:
+    violation
+    no_violation
 
-Return ONLY valid JSON:
-{{
-  "verdict": "violation" | "no_violation" | "inconclusive",
-  "rule_violated": "quote or describe the specific rule that was broken, or empty string if no violation",
-  "reasoning": "2-3 sentences explaining your decision with specific reference to the constitution",
-  "confidence": "high" | "medium" | "low",
-  "suggested_action": "hidden" | "removed" | "cleared"
-}}
+    If you are unsure, default to no_violation to protect free speech.
+    Only return violation if the post clearly and obviously breaks a stated rule.
+    """
+            result = gl.nondet.exec_prompt(prompt).strip().lower().strip('"')
+            if "no_violation" in result:
+                return "no_violation"
+            elif "violation" in result:
+                return "violation"
+            else:
+                return "no_violation"
 
-Where:
-- violation: post clearly breaks a community rule
-- no_violation: post does not break any rules
-- inconclusive: the rules are too ambiguous to make a clear determination
-- hidden: temporarily hide while under review (for borderline violations)
-- removed: permanently remove (for clear serious violations)
-- cleared: no action needed
-"""
-            result = gl.nondet.exec_prompt(prompt).strip()
-            cleaned = result.replace("```json", "").replace("```", "").strip()
-            try:
-                parsed = json.loads(cleaned)
-                verdict = parsed.get("verdict", "inconclusive")
-                if verdict not in ["violation", "no_violation", "inconclusive"]:
-                    verdict = "inconclusive"
-                action = parsed.get("suggested_action", "cleared")
-                if action not in ["hidden", "removed", "cleared"]:
-                    action = "cleared"
-                return json.dumps({
-                    "verdict": verdict,
-                    "rule_violated": str(parsed.get("rule_violated", "")),
-                    "reasoning": str(parsed.get("reasoning", "")),
-                    "confidence": str(parsed.get("confidence", "medium")),
-                    "suggested_action": action
-                }, sort_keys=True, separators=(',', ':'))
-            except:
-                return json.dumps({
-                    "verdict": "inconclusive",
-                    "rule_violated": "",
-                    "reasoning": "Could not parse AI evaluation",
-                    "confidence": "low",
-                    "suggested_action": "cleared"
-                }, sort_keys=True, separators=(',', ':'))
+        verdict = gl.eq_principle.prompt_non_comparative(
+            get_verdict,
+            task="Determine if a community post violates the community constitution rules",
+            criteria="Return exactly one word: violation or no_violation. Default to no_violation if uncertain."
+        )
+        verdict = verdict.strip().strip('"').lower()
+        if "no_violation" in verdict:
+            verdict = "no_violation"
+        elif "violation" in verdict:
+            verdict = "violation"
+        else:
+            verdict = "no_violation"
 
-        raw = gl.eq_principle.prompt_non_comparative(
-            evaluate_post,
-            task="Evaluate whether a community post violates the community constitution",
-            criteria="""The verdict must accurately reflect whether the post content
-violates the specific rules in the community constitution.
-Rule in favor of the poster when rules are ambiguous.
-Only return violation for clear, unambiguous breaches of stated rules."""
+        # Get rule violated separately
+        def get_rule_violated() -> str:
+            if verdict == "no_violation":
+                return ""
+            prompt = f"""A post was found to violate community rules.
+
+    Constitution: {constitution}
+
+    Post: "{post_title}" — {post_content[:500]}
+
+    Which specific rule was violated? Quote the exact rule in one sentence.
+    Reply with ONLY the rule text, nothing else.
+    """
+            return gl.nondet.exec_prompt(prompt).strip()
+
+        rule_violated = ""
+        if verdict == "violation":
+            rule_violated = gl.eq_principle.prompt_non_comparative(
+                get_rule_violated,
+                task="Identify which community rule was violated",
+                criteria="Quote the specific rule that was violated. One sentence only."
+            )
+
+        # Get reasoning separately
+        def get_reasoning() -> str:
+            prompt = f"""A community post was evaluated and the verdict is: {verdict}
+
+    Constitution: {constitution}
+    Post: "{post_title}"
+
+    Write one sentence explaining this moderation decision.
+    Reply with ONLY the sentence.
+    """
+            return gl.nondet.exec_prompt(prompt).strip()
+
+        reasoning = gl.eq_principle.prompt_non_comparative(
+            get_reasoning,
+            task="Explain a content moderation decision",
+            criteria="One sentence explaining why the verdict was reached."
         )
 
-        try:
-            data = json.loads(raw.strip().strip('"').replace('\\"', '"'))
-            verdict = data.get("verdict", "inconclusive")
-            rule_violated = data.get("rule_violated", "")
-            reasoning = data.get("reasoning", "")
-            confidence = data.get("confidence", "medium")
-            action = data.get("suggested_action", "cleared")
-        except:
-            verdict = "inconclusive"
-            rule_violated = ""
-            reasoning = "Consensus could not determine verdict"
-            confidence = "low"
-            action = "cleared"
-
-        if verdict not in ["violation", "no_violation", "inconclusive"]:
-            verdict = "inconclusive"
-        if action not in ["hidden", "removed", "cleared"]:
-            action = "cleared"
-        if confidence not in ["high", "medium", "low"]:
-            confidence = "medium"
+        action = "removed" if verdict == "violation" else "cleared"
+        confidence = "high"
 
         self.moderation_counter += i32(1)
         moderation_id = f"mod_{self.moderation_counter}"
@@ -588,15 +601,15 @@ Only return violation for clear, unambiguous breaches of stated rules."""
             confidence=confidence,
             action_taken=action,
             is_appeal=False,
+            appeal_context="",
             moderated_at=gl.message_raw["datetime"],
             triggered_by=triggered_by
         )
 
         self.posts[post_id].moderation_id = moderation_id
 
-        # Apply the action
         if verdict == "violation":
-            self.posts[post_id].status = action  # "hidden" or "removed"
+            self.posts[post_id].status = action
         else:
             self.posts[post_id].status = "active"
 
@@ -604,11 +617,6 @@ Only return violation for clear, unambiguous breaches of stated rules."""
 
     @gl.public.write
     def appeal_moderation(self, post_id: str, appeal_context: str) -> None:
-        """
-        Post author can appeal a moderation verdict.
-        Triggers a second AI review with additional context from the author.
-        The appeal threshold determines how strict the second review is.
-        """
         appellant = str(gl.message.sender_address)
         assert post_id in self.posts, "Post not found"
 
@@ -622,122 +630,89 @@ Only return violation for clear, unambiguous breaches of stated rules."""
         constitution = community.constitution
         post_title = post.title
         post_content = post.content
-        post_content_type = post.content_type
         community_name = community.name
-        appeal_threshold = community.appeal_threshold
         original_verdict = self.verdicts[post.moderation_id]
         original_reasoning = original_verdict.reasoning
         original_rule = original_verdict.rule_violated
+        context = appeal_context
 
         self.posts[post_id].status = "appealing"
 
-        def evaluate_appeal() -> str:
+        def get_appeal_verdict() -> str:
             fetched_content = ""
-            if post_content_type in ["url", "image_url"] and post_content.startswith("http"):
+            if post.content_type in ["url", "image_url"] and post_content.startswith("http"):
                 try:
                     response = gl.nondet.web.get(post_content)
                     fetched_content = response.body.decode("utf-8")[:3000]
                 except:
-                    fetched_content = "Could not fetch URL content"
+                    fetched_content = post_content
             else:
                 fetched_content = post_content
 
-            strictness = "very high" if appeal_threshold == "supermajority" else "standard"
-
             prompt = f"""You are reviewing an appeal of a content moderation decision.
 
-Community: "{community_name}"
-Appeal threshold: {appeal_threshold} (scrutiny level: {strictness})
+    Community: "{community_name}"
 
-Community Constitution:
-{constitution}
+    Constitution:
+    {constitution}
 
-Post Title: "{post_title}"
-Post Content: {fetched_content}
+    Post Title: "{post_title}"
+    Post Content: {fetched_content}
 
-Original Moderation Verdict: {original_verdict.verdict}
-Original Rule Cited: {original_rule}
-Original Reasoning: {original_reasoning}
+    Original verdict: {original_verdict.verdict}
+    Original rule cited: {original_rule}
+    Original reasoning: {original_reasoning}
 
-Author's Appeal Context:
-{appeal_context}
+    Author's appeal:
+    "{context}"
 
-Your task:
-Re-evaluate this post with fresh eyes, taking into account the author's
-appeal context. Consider whether the original moderation was correct.
+    Re-evaluate this post. Give significant benefit of the doubt to the author.
+    Only uphold the removal if the violation is absolutely clear and unambiguous.
+    When in doubt, side with the author and restore the post.
 
-For supermajority threshold: uphold removal only if violation is absolutely clear.
-For simple threshold: standard evaluation applies.
+    Reply with ONLY one of these two words:
+    violation
+    no_violation
+    """
+            result = gl.nondet.exec_prompt(prompt).strip().lower().strip('"')
+            if "no_violation" in result:
+                return "no_violation"
+            elif "violation" in result:
+                return "violation"
+            else:
+                return "no_violation"
 
-Return ONLY valid JSON:
-{{
-  "verdict": "violation" | "no_violation" | "inconclusive",
-  "rule_violated": "specific rule or empty string",
-  "reasoning": "2-3 sentences explaining your appeal decision",
-  "confidence": "high" | "medium" | "low",
-  "suggested_action": "hidden" | "removed" | "cleared",
-  "appeal_outcome": "upheld" | "overturned" | "inconclusive"
-}}
-"""
-            result = gl.nondet.exec_prompt(prompt).strip()
-            cleaned = result.replace("```json", "").replace("```", "").strip()
-            try:
-                parsed = json.loads(cleaned)
-                verdict = parsed.get("verdict", "inconclusive")
-                if verdict not in ["violation", "no_violation", "inconclusive"]:
-                    verdict = "inconclusive"
-                action = parsed.get("suggested_action", "cleared")
-                if action not in ["hidden", "removed", "cleared"]:
-                    action = "cleared"
-                appeal_outcome = parsed.get("appeal_outcome", "inconclusive")
-                if appeal_outcome not in ["upheld", "overturned", "inconclusive"]:
-                    appeal_outcome = "inconclusive"
-                return json.dumps({
-                    "verdict": verdict,
-                    "rule_violated": str(parsed.get("rule_violated", "")),
-                    "reasoning": str(parsed.get("reasoning", "")),
-                    "confidence": str(parsed.get("confidence", "medium")),
-                    "suggested_action": action,
-                    "appeal_outcome": appeal_outcome
-                }, sort_keys=True, separators=(',', ':'))
-            except:
-                return json.dumps({
-                    "verdict": "inconclusive",
-                    "rule_violated": "",
-                    "reasoning": "Could not parse appeal evaluation",
-                    "confidence": "low",
-                    "suggested_action": "cleared",
-                    "appeal_outcome": "inconclusive"
-                }, sort_keys=True, separators=(',', ':'))
-
-        raw = gl.eq_principle.prompt_non_comparative(
-            evaluate_appeal,
+        verdict = gl.eq_principle.prompt_non_comparative(
+            get_appeal_verdict,
             task="Review an appeal of a community content moderation decision",
-            criteria="""Re-evaluate the post fairly considering the author's appeal context.
-For supermajority threshold, give significant benefit of the doubt to the poster.
-Only uphold removal if the violation is clear and unambiguous."""
+            criteria="Return exactly one word: violation or no_violation. Give significant benefit of the doubt to the author. Default to no_violation when uncertain."
+        )
+        verdict = verdict.strip().strip('"').lower()
+        if "no_violation" in verdict:
+            verdict = "no_violation"
+        elif "violation" in verdict:
+            verdict = "violation"
+        else:
+            verdict = "no_violation"
+
+        def get_reasoning() -> str:
+            prompt = f"""An appeal of a moderation decision was reviewed. Verdict: {verdict}
+
+    Original removal reason: {original_reasoning}
+    Author's appeal: "{context}"
+
+    Write one sentence explaining the appeal outcome.
+    Reply with ONLY the sentence.
+    """
+            return gl.nondet.exec_prompt(prompt).strip()
+
+        reasoning = gl.eq_principle.prompt_non_comparative(
+            get_reasoning,
+            task="Explain an appeal moderation outcome",
+            criteria="One sentence explaining why the appeal was upheld or rejected."
         )
 
-        try:
-            data = json.loads(raw.strip().strip('"').replace('\\"', '"'))
-            verdict = data.get("verdict", "inconclusive")
-            rule_violated = data.get("rule_violated", "")
-            reasoning = data.get("reasoning", "")
-            confidence = data.get("confidence", "medium")
-            action = data.get("suggested_action", "cleared")
-            appeal_outcome = data.get("appeal_outcome", "inconclusive")
-        except:
-            verdict = "inconclusive"
-            rule_violated = ""
-            reasoning = "Appeal consensus could not be reached"
-            confidence = "low"
-            action = "cleared"
-            appeal_outcome = "inconclusive"
-
-        if verdict not in ["violation", "no_violation", "inconclusive"]:
-            verdict = "inconclusive"
-        if action not in ["hidden", "removed", "cleared"]:
-            action = "cleared"
+        action = "removed" if verdict == "violation" else "cleared"
 
         self.moderation_counter += i32(1)
         moderation_id = f"mod_{self.moderation_counter}"
@@ -747,11 +722,12 @@ Only uphold removal if the violation is clear and unambiguous."""
             post_id=post_id,
             community_id=community_id,
             verdict=verdict,
-            rule_violated=rule_violated,
+            rule_violated=original_rule if verdict == "violation" else "",
             reasoning=reasoning,
-            confidence=confidence,
+            confidence="high",
             action_taken=action,
             is_appeal=True,
+            appeal_context=appeal_context,
             moderated_at=gl.message_raw["datetime"],
             triggered_by=appellant
         )
@@ -799,12 +775,23 @@ Only uphold removal if the violation is clear and unambiguous."""
         assert self._is_moderator(community_id, proposer), "Only moderators can propose amendments"
         assert len(new_constitution) >= 50, "New constitution too short"
         assert len(new_constitution) <= 5000, "New constitution too long"
-        assert community_id not in self.active_amendment, "Amendment already in progress"
+
+        has_active = False
+        if community_id in self.active_amendment:
+            existing_id = self.active_amendment[community_id]
+            if existing_id in self.amendments:
+                if self.amendments[existing_id].status == "voting":
+                    has_active = True
+
+        assert not has_active, "Amendment already in progress"
 
         self.amendment_counter += i32(1)
         amendment_id = f"amend_{self.amendment_counter}"
 
         old_constitution = self.communities[community_id].constitution
+
+        # Build the DynArray the same way your working contracts do
+        voter_wallets: DynArray[str] = []
 
         self.amendments[amendment_id] = ConstitutionAmendment(
             amendment_id=amendment_id,
@@ -818,10 +805,14 @@ Only uphold removal if the violation is clear and unambiguous."""
             status="voting",
             proposed_at=gl.message_raw["datetime"],
             resolved_at="",
-            voter_wallets=[]
+            voter_wallets=voter_wallets
         )
 
         self.active_amendment[community_id] = amendment_id
+
+        # Keep the community's amendment list in sync
+        self.communities[community_id].amendment_ids.append(amendment_id)
+
         return amendment_id
 
     @gl.public.write
@@ -903,6 +894,16 @@ Only uphold removal if the violation is clear and unambiguous."""
         return gl.storage.copy_to_memory(self.verdicts[moderation_id])
 
     @gl.public.view
+    def get_community_members(self, community_id: str) -> list[Membership]:
+        result = []
+        if community_id in self.community_members:
+            for wallet in self.community_members[community_id]:
+                key = self._membership_key(community_id, wallet)
+                if key in self.memberships:
+                    result.append(gl.storage.copy_to_memory(self.memberships[key]))
+        return result
+
+    @gl.public.view
     def get_membership(self, community_id: str, wallet: str) -> Membership:
         key = self._membership_key(community_id, wallet)
         assert key in self.memberships, "Membership not found"
@@ -918,7 +919,39 @@ Only uphold removal if the violation is clear and unambiguous."""
         return gl.storage.copy_to_memory(self.amendments[amendment_id])
 
     @gl.public.view
+    def get_community_amendments(self, community_id: str) -> list[ConstitutionAmendment]:
+        assert community_id in self.communities, "Community not found"
+        result = []
+        for aid in self.communities[community_id].amendment_ids:
+            if aid in self.amendments:
+                result.append(gl.storage.copy_to_memory(self.amendments[aid]))
+        return result
+
+    @gl.public.view
     def get_active_amendment(self, community_id: str) -> str:
         if community_id in self.active_amendment:
             return self.active_amendment[community_id]
         return ""
+
+    @gl.public.view
+    def get_all_user_posts(self, user_wallet: str) -> list[Post]:
+        """Returns all posts authored by a specific user wallet address."""
+        result: list[Post] = []
+        for post_id in self.post_ids:
+            if post_id in self.posts:
+                post = self.posts[post_id]
+                if post.author == user_wallet:
+                    result.append(gl.storage.copy_to_memory(post))
+        return result
+
+    @gl.public.view
+    def get_all_user_communities(self, user_wallet: str) -> list[Community]:
+        """Returns all communities that a specific user wallet belongs to."""
+        result: list[Community] = []
+        for community_id in self.community_ids:
+            if community_id in self.communities:
+                key = self._membership_key(community_id, user_wallet)
+                if key in self.memberships and not self.memberships[key].banned:
+                    result.append(gl.storage.copy_to_memory(self.communities[community_id]))
+        return result
+

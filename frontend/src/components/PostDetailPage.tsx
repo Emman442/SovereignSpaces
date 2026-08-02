@@ -21,12 +21,14 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
   const { isPending: isFetchingcCommunity, data: community } = useFetchCommunity(communityId)
   const { isPending: isReportingPost, mutate: reportPost } = useReportPost()
   const { isPending: isDeletingPost, mutate: deletePost } = useDeleteOwnPost()
-  const {isPending: isSubmittingAppeal, mutate: appealModerationPost} = useAppealModerationPost()
+  const { isPending: isSubmittingAppeal, mutate: appealModerationPost } = useAppealModerationPost()
   const [isJoined, setIsJoined] = useState(false);
   const { isPending: isModeratingPost, mutate: moderatePost } = useModeratePost()
-  const { data: verdict } =post?.moderation_id ? useFetchPostVerdict(post?.moderation_id): {}
 
-  
+
+  const moderationId = post?.moderation_id ?? "";
+  const { data: verdict } = useFetchPostVerdict(moderationId);
+
 
   // Form states
   const [appealText, setAppealText] = useState('');
@@ -95,7 +97,7 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
 
   // Delete post handler
   const handleDeletePost = () => {
-    deletePost({post_id: postId}, {
+    deletePost({ post_id: postId }, {
       onSuccess: () => {
         onAddToast("post deleted successfully", "success")
       },
@@ -106,12 +108,14 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
   };
 
   // Trigger AI Validator review
-    const handleTriggerReview = () => {
-    moderatePost({post_id: postId}, {onSuccess: ()=>{
-      onAddToast("Post Moderation Successfully!", "success")
-    }, onError: ()=>{
-      onAddToast("Failed to moderate post", "error")
-    }})
+  const handleTriggerReview = () => {
+    moderatePost({ post_id: postId }, {
+      onSuccess: () => {
+        onAddToast("Post Moderation Successfully!", "success")
+      }, onError: () => {
+        onAddToast("Failed to moderate post", "error")
+      }
+    })
   };
 
   // Submit appeal handler
@@ -119,11 +123,11 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
     e.preventDefault();
     if (!appealText.trim()) return;
 
-    appealModerationPost({post_id: postId, appeal_context: appealText}, {
-      onSuccess: ()=>{
-        onAddToast("Appeal Submited Sccessfully!","success")
+    appealModerationPost({ post_id: postId, appeal_context: appealText }, {
+      onSuccess: () => {
+        onAddToast("Appeal Submited Sccessfully!", "success")
       },
-      onError: ()=>{
+      onError: () => {
         onAddToast("Failed to submit Appeal", "error")
       }
     })
@@ -211,7 +215,7 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
                 onClick={handleDeletePost}
                 className="text-xs font-mono text-[#555555] hover:text-[#dc2626] uppercase hover:bg-[#dc2626]/10 px-2 py-1 transition-all"
               >
-                {!isDeletingPost? "Delete My Post": "Deleting Post..."}
+                {!isDeletingPost ? "Delete My Post" : "Deleting Post..."}
               </button>
             )}
           </div>
@@ -269,7 +273,7 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
                 <div>
                   <div className="text-[10px] text-[#555555] uppercase mb-1">CONSENSUS CONFIDENCE</div>
                   <span className="text-white font-bold text-sm bg-[#111111] border border-[#222222] px-2.5 py-1">
-                    {verdict?.confidence}%
+                    {verdict?.confidence}
                   </span>
                 </div>
 

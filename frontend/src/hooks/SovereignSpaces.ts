@@ -515,11 +515,13 @@ export function useVoteOnAmendment() {
     return useMutation({
         mutationFn: async ({
             amendment_id,
-            vote_for
+            vote_for,
+            community_id
 
         }: {
             amendment_id: string,
             vote_for: boolean
+            community_id: string
         }) => {
             if (!contract) {
                 throw new Error("Contract not initialized");
@@ -531,7 +533,7 @@ export function useVoteOnAmendment() {
 
         onSuccess: async (_, variables) => {
             await queryClient.invalidateQueries({
-                queryKey: ["community_amendments", variables.amendment_id],
+                queryKey: ["community_amendments", variables.community_id],
             });
         },
         onError: async (error) => {
@@ -548,8 +550,10 @@ export function useResolveAmendment() {
     return useMutation({
         mutationFn: async ({
             amendment_id,
+            community_id
         }: {
             amendment_id: string,
+            community_id: string
         }) => {
             if (!contract) {
                 throw new Error("Contract not initialized");
@@ -561,7 +565,7 @@ export function useResolveAmendment() {
 
         onSuccess: async (_, variables) => {
             await queryClient.invalidateQueries({
-                queryKey: ["community_amendments", variables.amendment_id],
+                queryKey: ["community_amendments", variables.community_id],
             });
         },
         onError: async (error) => {

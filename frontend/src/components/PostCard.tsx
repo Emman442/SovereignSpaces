@@ -17,6 +17,7 @@ export const PostCard: React.FC<{
     onNavigate: (path: string) => void;
     expandedVerdicts: Record<string, boolean>;
     onToggleVerdict: (postId: string) => void;
+    moderatingPostId: string | null;
 }> = ({
     post,
     community,
@@ -31,6 +32,7 @@ export const PostCard: React.FC<{
     onNavigate,
     expandedVerdicts,
     onToggleVerdict,
+    moderatingPostId
 }) => {
         // Hook is always called (pass empty string / disabled when not needed)
         const { data: verdict } = useFetchPostVerdict(
@@ -136,6 +138,7 @@ export const PostCard: React.FC<{
                         {isReportedThreshold && post.status === 'active' && (
                             <button
                                 onClick={() => onTriggerReview(post.post_id)}
+                                disabled={post.post_id === moderatingPostId}
                                 className="border border-white text-white px-2.5 py-1 text-[10px] font-bold uppercase hover:bg-white hover:text-black transition-colors"
                             >
                                 {isModeratingPost ? "Moderaing Post..." : "Trigger Genlayer to moderate post"}
