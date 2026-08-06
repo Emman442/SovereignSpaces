@@ -6,8 +6,6 @@ from datetime import datetime, timezone
 import json
 
 
-# ─── Data Structures ──────────────────────────────────────────
-
 @allow_storage
 @dataclass
 class Community:
@@ -19,7 +17,7 @@ class Community:
     member_count: i32
     post_count: i32
     moderator_count: i32
-    report_threshold: i32       # reports needed to trigger AI review
+    report_threshold: i32 
     appeal_threshold: str       # "simple" | "supermajority"
     status: str                 # "active" | "archived"
     created_at: str
@@ -55,7 +53,7 @@ class Post:
     status: str                 # "active" | "hidden" | "removed" | "appealing"
     report_count: i32
     created_at: str
-    moderation_id: str          # filled when moderated
+    moderation_id: str 
 
 
 @allow_storage
@@ -76,13 +74,13 @@ class ModerationVerdict:
     post_id: str
     community_id: str
     verdict: str                # "violation" | "no_violation" | "inconclusive"
-    rule_violated: str          # which part of constitution was violated
-    reasoning: str              # AI reasoning stored on-chain
+    rule_violated: str
+    reasoning: str 
     confidence: str             # "high" | "medium" | "low"
     action_taken: str           # "hidden" | "removed" | "cleared"
     is_appeal: bool
     moderated_at: str
-    triggered_by: str           # wallet that triggered the moderation
+    triggered_by: str
     appeal_context: str
 
 
@@ -105,7 +103,6 @@ class ConstitutionAmendment:
 
 class SovereignSpaces(gl.Contract):
 
-    # Communities
     communities: TreeMap[str, Community]
     community_ids: DynArray[str]
     community_counter: i32
@@ -113,31 +110,24 @@ class SovereignSpaces(gl.Contract):
     memberships: TreeMap[str, Membership]
     community_members: TreeMap[str, DynArray[str]]
 
-    # Posts — keyed by post_id
     posts: TreeMap[str, Post]
     post_ids: DynArray[str]
-    post_counter: i32
-
-    # community_id -> list of post_ids
+    post_counter: i32   
+    
     community_posts: TreeMap[str, DynArray[str]]
     reports: TreeMap[str, Report]
     report_counter: i32
 
-    # Track if wallet already reported a post — keyed by post_id + "|" + wallet
     has_reported: TreeMap[str, bool]
 
-    # Moderation verdicts — keyed by moderation_id
     verdicts: TreeMap[str, ModerationVerdict]
     moderation_counter: i32
 
-    # Constitution amendments — keyed by amendment_id
     amendments: TreeMap[str, ConstitutionAmendment]
     amendment_counter: i32
 
-    # community_id -> active amendment_id (only one at a time)
     active_amendment: TreeMap[str, str]
 
-    # Admin
     admin: str
 
     def __init__(self, admin_address: str):
@@ -148,7 +138,6 @@ class SovereignSpaces(gl.Contract):
         self.moderation_counter = i32(0)
         self.amendment_counter = i32(0)
 
-    # ─── Helpers ──────────────────────────────────────────────
 
     def _membership_key(self, community_id: str, wallet: str) -> str:
         return community_id + "|" + wallet
@@ -172,7 +161,6 @@ class SovereignSpaces(gl.Contract):
             return False
         return self.memberships[key].role == "founder"
 
-    # ─── Community Creation ───────────────────────────────────
 
     @gl.public.write
     def create_community(
@@ -205,7 +193,6 @@ class SovereignSpaces(gl.Contract):
         self.community_counter += i32(1)
         community_id = f"community_{self.community_counter}"
 
-        # Build DynArrays the same way your working contracts do
         tag_array: DynArray[str] = []
         for tag in tags[:10]:
             tag_array.append(tag)
@@ -237,14 +224,12 @@ class SovereignSpaces(gl.Contract):
 
         self.community_ids.append(community_id)
 
-        # Same pattern that works in BetSettler / VeriFree
         self.community_posts[community_id] = []
 
         members: DynArray[str] = []
         members.append(founder)
         self.community_members[community_id] = members
 
-        # Founder is automatically a member with founder role
         membership_key = self._membership_key(community_id, founder)
         self.memberships[membership_key] = Membership(
             wallet=founder,
@@ -374,8 +359,6 @@ class SovereignSpaces(gl.Contract):
                 new.append(w)
         self.community_members[community_id] = new
 
-    # ─── Posting ──────────────────────────────────────────────
-
     @gl.public.write
     def create_post(
         self,
@@ -430,8 +413,6 @@ class SovereignSpaces(gl.Contract):
         assert post.status == "active", "Post not active"
         self.posts[post_id].status = "removed"
 
-    # ─── Reporting ────────────────────────────────────────────
-
     @gl.public.write
     def report_post(self, post_id: str, reason: str) -> str:
         reporter = str(gl.message.sender_address)
@@ -467,7 +448,6 @@ class SovereignSpaces(gl.Contract):
 
         return report_id
 
-    # ─── AI Moderation (Core GenLayer Logic) ─────────────────
 
     @gl.public.write
     def moderate_post(self, post_id: str) -> None:
@@ -544,7 +524,6 @@ class SovereignSpaces(gl.Contract):
         else:
             verdict = "no_violation"
 
-        # Get rule violated separately
         def get_rule_violated() -> str:
             if verdict == "no_violation":
                 return ""
@@ -567,7 +546,6 @@ class SovereignSpaces(gl.Contract):
                 criteria="Quote the specific rule that was violated. One sentence only."
             )
 
-        # Get reasoning separately
         def get_reasoning() -> str:
             prompt = f"""A community post was evaluated and the verdict is: {verdict}
 
@@ -612,8 +590,6 @@ class SovereignSpaces(gl.Contract):
             self.posts[post_id].status = action
         else:
             self.posts[post_id].status = "active"
-
-    # ─── Appeal ───────────────────────────────────────────────
 
     @gl.public.write
     def appeal_moderation(self, post_id: str, appeal_context: str) -> None:
@@ -739,7 +715,6 @@ class SovereignSpaces(gl.Contract):
         else:
             self.posts[post_id].status = "active"
 
-    # ─── Moderator Manual Actions ─────────────────────────────
 
     @gl.public.write
     def moderator_hide_post(self, post_id: str, reason: str) -> None:
@@ -761,7 +736,6 @@ class SovereignSpaces(gl.Contract):
         assert post.status == "hidden", "Post is not hidden"
         self.posts[post_id].status = "active"
 
-    # ─── Constitution Amendment ───────────────────────────────
 
     @gl.public.write
     def propose_amendment(
@@ -790,7 +764,6 @@ class SovereignSpaces(gl.Contract):
 
         old_constitution = self.communities[community_id].constitution
 
-        # Build the DynArray the same way your working contracts do
         voter_wallets: DynArray[str] = []
 
         self.amendments[amendment_id] = ConstitutionAmendment(
@@ -810,7 +783,6 @@ class SovereignSpaces(gl.Contract):
 
         self.active_amendment[community_id] = amendment_id
 
-        # Keep the community's amendment list in sync
         self.communities[community_id].amendment_ids.append(amendment_id)
 
         return amendment_id
@@ -858,7 +830,6 @@ class SovereignSpaces(gl.Contract):
         if community_id in self.active_amendment:
             del self.active_amendment[community_id]
 
-    # ─── Read Methods ─────────────────────────────────────────
 
     @gl.public.view
     def get_community(self, community_id: str) -> Community:
