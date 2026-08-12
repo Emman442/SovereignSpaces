@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 import json
 
 
+# ─── Data Structures ──────────────────────────────────────────
+
 @allow_storage
 @dataclass
 class Community:
@@ -17,7 +19,7 @@ class Community:
     member_count: i32
     post_count: i32
     moderator_count: i32
-    report_threshold: i32 
+    report_threshold: i32       # reports needed to trigger AI review
     appeal_threshold: str       # "simple" | "supermajority"
     status: str                 # "active" | "archived"
     created_at: str
@@ -53,7 +55,7 @@ class Post:
     status: str                 # "active" | "hidden" | "removed" | "appealing"
     report_count: i32
     created_at: str
-    moderation_id: str 
+    moderation_id: str          # filled when moderated
 
 
 @allow_storage
@@ -74,13 +76,13 @@ class ModerationVerdict:
     post_id: str
     community_id: str
     verdict: str                # "violation" | "no_violation" | "inconclusive"
-    rule_violated: str
-    reasoning: str 
+    rule_violated: str          # which part of constitution was violated
+    reasoning: str              # AI reasoning stored on-chain
     confidence: str             # "high" | "medium" | "low"
     action_taken: str           # "hidden" | "removed" | "cleared"
     is_appeal: bool
     moderated_at: str
-    triggered_by: str
+    triggered_by: str           # wallet that triggered the moderation
     appeal_context: str
 
 
@@ -103,6 +105,7 @@ class ConstitutionAmendment:
 
 class SovereignSpaces(gl.Contract):
 
+    # Communities
     communities: TreeMap[str, Community]
     community_ids: DynArray[str]
     community_counter: i32
@@ -110,24 +113,31 @@ class SovereignSpaces(gl.Contract):
     memberships: TreeMap[str, Membership]
     community_members: TreeMap[str, DynArray[str]]
 
+    # Posts — keyed by post_id
     posts: TreeMap[str, Post]
     post_ids: DynArray[str]
-    post_counter: i32   
-    
+    post_counter: i32
+
+    # community_id -> list of post_ids
     community_posts: TreeMap[str, DynArray[str]]
     reports: TreeMap[str, Report]
     report_counter: i32
 
+    # Track if wallet already reported a post — keyed by post_id + "|" + wallet
     has_reported: TreeMap[str, bool]
 
+    # Moderation verdicts — keyed by moderation_id
     verdicts: TreeMap[str, ModerationVerdict]
     moderation_counter: i32
 
+    # Constitution amendments — keyed by amendment_id
     amendments: TreeMap[str, ConstitutionAmendment]
     amendment_counter: i32
 
+    # community_id -> active amendment_id (only one at a time)
     active_amendment: TreeMap[str, str]
 
+    # Admin
     admin: str
 
     def __init__(self, admin_address: str):
@@ -138,6 +148,7 @@ class SovereignSpaces(gl.Contract):
         self.moderation_counter = i32(0)
         self.amendment_counter = i32(0)
 
+    # ─── Helpers ──────────────────────────────────────────────
 
     def _membership_key(self, community_id: str, wallet: str) -> str:
         return community_id + "|" + wallet
@@ -161,6 +172,7 @@ class SovereignSpaces(gl.Contract):
             return False
         return self.memberships[key].role == "founder"
 
+    # ─── Community Creation ───────────────────────────────────
 
     @gl.public.write
     def create_community(
@@ -193,6 +205,7 @@ class SovereignSpaces(gl.Contract):
         self.community_counter += i32(1)
         community_id = f"community_{self.community_counter}"
 
+        # Build DynArrays the same way your working contracts do
         tag_array: DynArray[str] = []
         for tag in tags[:10]:
             tag_array.append(tag)
@@ -224,12 +237,14 @@ class SovereignSpaces(gl.Contract):
 
         self.community_ids.append(community_id)
 
+        # Same pattern that works in BetSettler / VeriFree
         self.community_posts[community_id] = []
 
         members: DynArray[str] = []
         members.append(founder)
         self.community_members[community_id] = members
 
+        # Founder is automatically a member with founder role
         membership_key = self._membership_key(community_id, founder)
         self.memberships[membership_key] = Membership(
             wallet=founder,
@@ -359,6 +374,8 @@ class SovereignSpaces(gl.Contract):
                 new.append(w)
         self.community_members[community_id] = new
 
+    # ─── Posting ──────────────────────────────────────────────
+
     @gl.public.write
     def create_post(
         self,
@@ -412,6 +429,8 @@ class SovereignSpaces(gl.Contract):
         assert post.author == author, "Not your post"
         assert post.status == "active", "Post not active"
         self.posts[post_id].status = "removed"
+
+    # ─── Reporting ────────────────────────────────────────────
 
     @gl.public.write
     def report_post(self, post_id: str, reason: str) -> str:
@@ -485,38 +504,36 @@ class SovereignSpaces(gl.Contract):
 
     Community: "{community_name}"
 
-    Community Constitution (the rules):
+    Community Constitution — these are the ONLY rules that matter:
     {constitution}
 
-    Post Title:
-    "{post_title}"
-
+    Post Title: "{post_title}"
     Post Content:
     {fetched_content}
 
-    Does this post violate any rule in the community constitution?
+    Read the constitution carefully. Read the post carefully.
+    Does this post clearly and obviously violate any specific rule stated in the constitution?
 
-    Reply with ONLY one of these two words:
+    Rules for your decision:
+    - Only flag a violation if the post clearly breaks a specific stated rule
+    - If the rule is ambiguous or the post is borderline, default to no_violation
+    - Do not flag violations based on rules that are not in the constitution
+    - The post must break the LETTER of a rule, not just its spirit
+
+    Reply with ONLY one of these two words and nothing else:
     violation
     no_violation
-
-    If you are unsure, default to no_violation to protect free speech.
-    Only return violation if the post clearly and obviously breaks a stated rule.
     """
-            result = gl.nondet.exec_prompt(prompt).strip().lower().strip('"')
+            result = gl.nondet.exec_prompt(prompt).strip().lower().strip('"').strip()
             if "no_violation" in result:
                 return "no_violation"
             elif "violation" in result:
                 return "violation"
-            else:
-                return "no_violation"
+            return "no_violation"
 
-        verdict = gl.eq_principle.prompt_non_comparative(
-            get_verdict,
-            task="Determine if a community post violates the community constitution rules",
-            criteria="Return exactly one word: violation or no_violation. Default to no_violation if uncertain."
-        )
-        verdict = verdict.strip().strip('"').lower()
+        # strict_eq forces validators to independently reach same substantive verdict
+        verdict_raw = gl.eq_principle.strict_eq(get_verdict)
+        verdict = verdict_raw.strip().strip('"').lower()
         if "no_violation" in verdict:
             verdict = "no_violation"
         elif "violation" in verdict:
@@ -524,47 +541,58 @@ class SovereignSpaces(gl.Contract):
         else:
             verdict = "no_violation"
 
-        def get_rule_violated() -> str:
-            if verdict == "no_violation":
-                return ""
-            prompt = f"""A post was found to violate community rules.
-
-    Constitution: {constitution}
-
-    Post: "{post_title}" — {post_content[:500]}
-
-    Which specific rule was violated? Quote the exact rule in one sentence.
-    Reply with ONLY the rule text, nothing else.
-    """
-            return gl.nondet.exec_prompt(prompt).strip()
-
+        # Step 2 — get rule and reasoning only if violation found
+        # Use prompt_non_comparative for the explanation since wording doesn't need to match exactly
         rule_violated = ""
+        reasoning = ""
+
         if verdict == "violation":
-            rule_violated = gl.eq_principle.prompt_non_comparative(
-                get_rule_violated,
-                task="Identify which community rule was violated",
-                criteria="Quote the specific rule that was violated. One sentence only."
+            def get_details() -> str:
+                prompt = f"""A post was found to violate a community constitution rule.
+
+    Constitution:
+    {constitution}
+
+    Post Title: "{post_title}"
+    Post Content: {post_content[:1000]}
+
+    Which specific rule was violated and why?
+
+    Return ONLY valid JSON:
+    {{"rule_violated":"quote the specific rule that was broken","reasoning":"one sentence explaining why this post breaks that rule"}}
+    """
+                result = gl.nondet.exec_prompt(prompt).strip()
+                cleaned = result.replace("```json", "").replace("```", "").strip()
+                try:
+                    parsed = json.loads(cleaned)
+                    return json.dumps({
+                        "rule_violated": str(parsed.get("rule_violated", "")),
+                        "reasoning": str(parsed.get("reasoning", ""))
+                    }, sort_keys=True, separators=(',', ':'))
+                except:
+                    return json.dumps({
+                        "rule_violated": "Constitution rule violated",
+                        "reasoning": "Post was found to violate community rules"
+                    }, sort_keys=True, separators=(',', ':'))
+
+            details_raw = gl.eq_principle.prompt_non_comparative(
+                get_details,
+                task="Identify which constitution rule was violated and explain why",
+                criteria="Quote the specific rule and give one sentence explanation. Must be consistent with a violation verdict."
             )
 
-        def get_reasoning() -> str:
-            prompt = f"""A community post was evaluated and the verdict is: {verdict}
+            try:
+                details = json.loads(details_raw.strip().strip('"').replace('\\"', '"'))
+                rule_violated = details.get("rule_violated", "")
+                reasoning = details.get("reasoning", "")
+            except:
+                rule_violated = "Constitution rule violated"
+                reasoning = "Post was found to violate community rules"
 
-    Constitution: {constitution}
-    Post: "{post_title}"
-
-    Write one sentence explaining this moderation decision.
-    Reply with ONLY the sentence.
-    """
-            return gl.nondet.exec_prompt(prompt).strip()
-
-        reasoning = gl.eq_principle.prompt_non_comparative(
-            get_reasoning,
-            task="Explain a content moderation decision",
-            criteria="One sentence explaining why the verdict was reached."
-        )
+        else:
+            reasoning = "Post does not violate any community rules"
 
         action = "removed" if verdict == "violation" else "cleared"
-        confidence = "high"
 
         self.moderation_counter += i32(1)
         moderation_id = f"mod_{self.moderation_counter}"
@@ -576,7 +604,7 @@ class SovereignSpaces(gl.Contract):
             verdict=verdict,
             rule_violated=rule_violated,
             reasoning=reasoning,
-            confidence=confidence,
+            confidence="high",
             action_taken=action,
             is_appeal=False,
             appeal_context="",
@@ -591,130 +619,164 @@ class SovereignSpaces(gl.Contract):
         else:
             self.posts[post_id].status = "active"
 
+        # ─── Appeal ───────────────────────────────────────────────
+
     @gl.public.write
     def appeal_moderation(self, post_id: str, appeal_context: str) -> None:
-        appellant = str(gl.message.sender_address)
-        assert post_id in self.posts, "Post not found"
+            appellant = str(gl.message.sender_address)
+            assert post_id in self.posts, "Post not found"
 
-        post = self.posts[post_id]
-        assert post.author == appellant, "Only the post author can appeal"
-        assert post.status in ["hidden", "removed"], "Post has not been moderated"
-        assert post.moderation_id != "", "No moderation record found"
+            post = self.posts[post_id]
+            assert post.author == appellant, "Only the post author can appeal"
+            assert post.status in ["hidden", "removed"], "Post has not been moderated"
+            assert post.moderation_id != "", "No moderation record found"
+            assert len(appeal_context) > 0, "Appeal context required"
+            assert len(appeal_context) <= 1000, "Appeal context too long"
 
-        community_id = post.community_id
-        community = self.communities[community_id]
-        constitution = community.constitution
-        post_title = post.title
-        post_content = post.content
-        community_name = community.name
-        original_verdict = self.verdicts[post.moderation_id]
-        original_reasoning = original_verdict.reasoning
-        original_rule = original_verdict.rule_violated
-        context = appeal_context
+            community_id = post.community_id
+            assert community_id in self.communities, "Community not found"
+            community = self.communities[community_id]
 
-        self.posts[post_id].status = "appealing"
+            # snapshot plain values before nondet
+            constitution = community.constitution
+            post_title = post.title
+            post_content = post.content
+            post_content_type = post.content_type
+            community_name = community.name
 
-        def get_appeal_verdict() -> str:
-            fetched_content = ""
-            if post.content_type in ["url", "image_url"] and post_content.startswith("http"):
-                try:
-                    response = gl.nondet.web.get(post_content)
-                    fetched_content = response.body.decode("utf-8")[:3000]
-                except:
-                    fetched_content = post_content
-            else:
+            original = self.verdicts[post.moderation_id]
+            assert not original.is_appeal, "Already appealed"
+            original_verdict_text = original.verdict
+            original_reasoning = original.reasoning
+            original_rule = original.rule_violated
+            context = appeal_context
+
+            self.posts[post_id].status = "appealing"
+
+            def get_appeal_verdict() -> str:
                 fetched_content = post_content
+                images = []
 
-            prompt = f"""You are reviewing an appeal of a content moderation decision.
+                if post_content_type in ["url", "image_url"] and post_content.startswith("http"):
+                    try:
+                        response = gl.nondet.web.get(post_content)
+                        body = response.body
+                        is_image = (
+                            post_content_type == "image_url"
+                            or post_content.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif"))
+                        )
+                        if is_image:
+                            images.append(body)
+                            fetched_content = f"[image at url] {post_content}"
+                        else:
+                            fetched_content = body.decode("utf-8", errors="ignore")[:3000]
+                    except:
+                        fetched_content = post_content
 
-    Community: "{community_name}"
+                prompt = f"""You are reviewing an appeal of a moderation decision.
 
-    Constitution:
-    {constitution}
+        Community: "{community_name}"
 
-    Post Title: "{post_title}"
-    Post Content: {fetched_content}
+        Constitution:
+        {constitution}
 
-    Original verdict: {original_verdict.verdict}
-    Original rule cited: {original_rule}
-    Original reasoning: {original_reasoning}
+        Post title: "{post_title}"
+        Post content: {fetched_content}
 
-    Author's appeal:
-    "{context}"
+        Original verdict: {original_verdict_text}
+        Original rule cited: {original_rule}
+        Original reasoning: {original_reasoning}
 
-    Re-evaluate this post. Give significant benefit of the doubt to the author.
-    Only uphold the removal if the violation is absolutely clear and unambiguous.
-    When in doubt, side with the author and restore the post.
+        Author appeal:
+        "{context}"
 
-    Reply with ONLY one of these two words:
-    violation
-    no_violation
-    """
-            result = gl.nondet.exec_prompt(prompt).strip().lower().strip('"')
-            if "no_violation" in result:
+        Re-evaluate the post under the constitution.
+        Give reasonable benefit of the doubt to the author.
+        Uphold removal only if the violation remains clear.
+
+        Reply with exactly one word only:
+        violation
+        no_violation
+        """
+
+                if len(images) > 0:
+                    result = gl.nondet.exec_prompt(prompt, images=images)
+                else:
+                    result = gl.nondet.exec_prompt(prompt)
+
+                text = str(result).strip().lower().replace('"', "").replace("'", "")
+                if "no_violation" in text:
+                    return "no_violation"
+                if "violation" in text:
+                    return "violation"
                 return "no_violation"
-            elif "violation" in result:
-                return "violation"
+
+            raw = gl.eq_principle.prompt_non_comparative(
+                get_appeal_verdict,
+                task="Review a moderation appeal and decide violation or no_violation",
+                criteria="Equivalent only if both outputs are the exact same word: violation or no_violation."
+            )
+
+            verdict = str(raw).strip().lower().replace('"', "").replace("'", "")
+            if "no_violation" in verdict:
+                verdict = "no_violation"
+            elif "violation" in verdict:
+                verdict = "violation"
             else:
-                return "no_violation"
+                verdict = "no_violation"
 
-        verdict = gl.eq_principle.prompt_non_comparative(
-            get_appeal_verdict,
-            task="Review an appeal of a community content moderation decision",
-            criteria="Return exactly one word: violation or no_violation. Give significant benefit of the doubt to the author. Default to no_violation when uncertain."
-        )
-        verdict = verdict.strip().strip('"').lower()
-        if "no_violation" in verdict:
-            verdict = "no_violation"
-        elif "violation" in verdict:
-            verdict = "violation"
-        else:
-            verdict = "no_violation"
+            # optional reasoning (can omit if it causes UNDETERMINED)
+            def get_reasoning() -> str:
+                prompt = f"""Appeal verdict: {verdict}
+        Original reason: {original_reasoning}
+        Author appeal: "{context}"
+        Write one short sentence explaining the appeal outcome.
+        Reply with only that sentence.
+        """
+                return str(gl.nondet.exec_prompt(prompt)).strip()
 
-        def get_reasoning() -> str:
-            prompt = f"""An appeal of a moderation decision was reviewed. Verdict: {verdict}
+            try:
+                reasoning = gl.eq_principle.prompt_non_comparative(
+                    get_reasoning,
+                    task="Explain an appeal outcome",
+                    criteria="Equivalent if they support the same appeal result."
+                )
+                reasoning = str(reasoning).strip().strip('"')
+            except:
+                reasoning = (
+                    "Appeal rejected; violation stands."
+                    if verdict == "violation"
+                    else "Appeal upheld; post restored."
+                )
 
-    Original removal reason: {original_reasoning}
-    Author's appeal: "{context}"
+            action = "removed" if verdict == "violation" else "cleared"
 
-    Write one sentence explaining the appeal outcome.
-    Reply with ONLY the sentence.
-    """
-            return gl.nondet.exec_prompt(prompt).strip()
+            self.moderation_counter += i32(1)
+            moderation_id = f"mod_{self.moderation_counter}"
 
-        reasoning = gl.eq_principle.prompt_non_comparative(
-            get_reasoning,
-            task="Explain an appeal moderation outcome",
-            criteria="One sentence explaining why the appeal was upheld or rejected."
-        )
+            self.verdicts[moderation_id] = ModerationVerdict(
+                moderation_id=moderation_id,
+                post_id=post_id,
+                community_id=community_id,
+                verdict=verdict,
+                rule_violated=original_rule if verdict == "violation" else "",
+                reasoning=reasoning,
+                confidence="high",
+                action_taken=action,
+                is_appeal=True,
+                appeal_context=appeal_context,
+                moderated_at=gl.message_raw["datetime"],
+                triggered_by=appellant
+            )
 
-        action = "removed" if verdict == "violation" else "cleared"
+            self.posts[post_id].moderation_id = moderation_id
 
-        self.moderation_counter += i32(1)
-        moderation_id = f"mod_{self.moderation_counter}"
+            if verdict == "violation":
+                self.posts[post_id].status = "removed"
+            else:
+                self.posts[post_id].status = "active"
 
-        self.verdicts[moderation_id] = ModerationVerdict(
-            moderation_id=moderation_id,
-            post_id=post_id,
-            community_id=community_id,
-            verdict=verdict,
-            rule_violated=original_rule if verdict == "violation" else "",
-            reasoning=reasoning,
-            confidence="high",
-            action_taken=action,
-            is_appeal=True,
-            appeal_context=appeal_context,
-            moderated_at=gl.message_raw["datetime"],
-            triggered_by=appellant
-        )
-
-        self.posts[post_id].moderation_id = moderation_id
-
-        if verdict == "violation":
-            self.posts[post_id].status = action
-        else:
-            self.posts[post_id].status = "active"
-
+    # ─── Moderator Manual Actions ─────────────────────────────
 
     @gl.public.write
     def moderator_hide_post(self, post_id: str, reason: str) -> None:
@@ -736,6 +798,7 @@ class SovereignSpaces(gl.Contract):
         assert post.status == "hidden", "Post is not hidden"
         self.posts[post_id].status = "active"
 
+    # ─── Constitution Amendment ───────────────────────────────
 
     @gl.public.write
     def propose_amendment(
@@ -764,6 +827,7 @@ class SovereignSpaces(gl.Contract):
 
         old_constitution = self.communities[community_id].constitution
 
+        # Build the DynArray the same way your working contracts do
         voter_wallets: DynArray[str] = []
 
         self.amendments[amendment_id] = ConstitutionAmendment(
@@ -783,6 +847,7 @@ class SovereignSpaces(gl.Contract):
 
         self.active_amendment[community_id] = amendment_id
 
+        # Keep the community's amendment list in sync
         self.communities[community_id].amendment_ids.append(amendment_id)
 
         return amendment_id
@@ -830,6 +895,7 @@ class SovereignSpaces(gl.Contract):
         if community_id in self.active_amendment:
             del self.active_amendment[community_id]
 
+    # ─── Read Methods ─────────────────────────────────────────
 
     @gl.public.view
     def get_community(self, community_id: str) -> Community:
@@ -925,4 +991,3 @@ class SovereignSpaces(gl.Contract):
                 if key in self.memberships and not self.memberships[key].banned:
                     result.append(gl.storage.copy_to_memory(self.communities[community_id]))
         return result
-

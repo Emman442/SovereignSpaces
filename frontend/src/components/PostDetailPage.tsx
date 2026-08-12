@@ -33,7 +33,6 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
   // Form states
   const [appealText, setAppealText] = useState('');
   const [isReporting, setIsReporting] = useState(false);
-  const [isTriggeringReview, setIsTriggeringReview] = useState(false);
 
   // Transaction logging states
   const [txLog, setTxLog] = useState<string | null>(null);
@@ -407,10 +406,10 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = ({
                   </p>
                   <button
                     onClick={handleTriggerReview}
-                    disabled={isTriggeringReview}
+                    disabled={isModeratingPost}
                     className="w-full text-center bg-white text-black py-2.5 px-3 font-bold text-xs uppercase hover:bg-[#dddddd] transition-colors"
                   >
-                    {isTriggeringReview ? 'Evaluating State...' : 'Trigger AI Review'}
+                    {isModeratingPost ? 'Moderating post.....' : 'Trigger AI Review'}
                   </button>
                   <span className="text-[9px] text-[#555555] block mt-1 leading-relaxed text-center uppercase">
                     Anyone can trigger review once flags reach limit.
